@@ -8,9 +8,11 @@ import Animated, {
   SlideInRight,
   FadeIn,
 } from 'react-native-reanimated';
+import { ShareButton } from './ShareButton';
 import type { Question, VoteResult } from '../types';
 
 const { width } = Dimensions.get('window');
+const RESULT_DISPLAY_TIME = 2500; // Show result for 2.5 seconds to allow sharing
 
 interface QuestionCardProps {
   question: Question;
@@ -24,13 +26,13 @@ export function QuestionCard({ question, voteResult, onAnimationComplete }: Ques
 
   useEffect(() => {
     if (voteResult && onAnimationComplete) {
-      // After showing result, slide out
+      // After showing result, slide out (longer time to allow sharing)
       const timer = setTimeout(() => {
         translateX.value = withTiming(-width, { duration: 300 }, () => {
           runOnJS(onAnimationComplete)();
         });
         opacity.value = withTiming(0, { duration: 300 });
-      }, 1500);
+      }, RESULT_DISPLAY_TIME);
       
       return () => clearTimeout(timer);
     }
@@ -133,6 +135,13 @@ export function QuestionCard({ question, voteResult, onAnimationComplete }: Ques
                 />
               </View>
             </View>
+
+            {/* Share Button */}
+            <ShareButton 
+              question={question} 
+              result={voteResult} 
+              style={{ marginTop: 24 }}
+            />
           </Animated.View>
         )}
       </View>

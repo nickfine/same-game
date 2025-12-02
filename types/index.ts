@@ -65,3 +65,38 @@ export interface CreateQuestionInput {
   option_b: string;
   initial_vote: VoteChoice;
 }
+
+// Achievement System
+export type AchievementId = 
+  | 'first_vote'
+  | 'first_win'
+  | 'first_question'
+  | 'streak_3'
+  | 'streak_5'
+  | 'streak_10'
+  | 'votes_10'
+  | 'votes_50'
+  | 'votes_100'
+  | 'wins_10'
+  | 'wins_25'
+  | 'wins_50'
+  | 'questions_5'
+  | 'questions_10'
+  | 'score_10'
+  | 'score_25'
+  | 'score_50'
+  | 'score_100';
+
+export interface Achievement {
+  id: AchievementId;
+  name: string;
+  description: string;
+  icon: string;
+  requirement: number;
+  category: 'voting' | 'winning' | 'creating' | 'streak' | 'score';
+}
+
+export interface UserAchievement {
+  id: AchievementId;
+  unlocked_at: Timestamp;
+}

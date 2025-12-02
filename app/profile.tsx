@@ -6,7 +6,9 @@ import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useAuth } from '../hooks/useAuth';
+import { useAchievements } from '../hooks/useAchievements';
 import { getUserStats } from '../lib/firestore';
+import type { Achievement } from '../types';
 
 interface StatCardProps {
   label: string;
@@ -68,8 +70,57 @@ function StatCard({ label, value, sublabel, color = '#18181b', delay = 0 }: Stat
   );
 }
 
+// Achievement Badge Component
+function AchievementBadge({ 
+  achievement, 
+  unlocked, 
+  delay 
+}: { 
+  achievement: Achievement & { unlocked: boolean }; 
+  unlocked: boolean;
+  delay: number;
+}) {
+  return (
+    <Animated.View
+      entering={FadeInDown.delay(delay).springify()}
+      style={{
+        width: '30%',
+        alignItems: 'center',
+        marginBottom: 16,
+        opacity: unlocked ? 1 : 0.4,
+      }}
+    >
+      <View
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: unlocked ? '#F59E0B' : '#e4e4e7',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginBottom: 8,
+        }}
+      >
+        <Text style={{ fontSize: 28 }}>{achievement.icon}</Text>
+      </View>
+      <Text
+        style={{
+          fontFamily: 'Poppins_700Bold',
+          fontSize: 11,
+          color: unlocked ? '#18181b' : '#a1a1aa',
+          textAlign: 'center',
+        }}
+        numberOfLines={2}
+      >
+        {achievement.name}
+      </Text>
+    </Animated.View>
+  );
+}
+
 export default function ProfileScreen() {
-  const { user } = useAuth();
+  const { user, uid } = useAuth();
+  const { achievements, unlockedCount, totalCount } = useAchievements(uid, user);
   
   const stats = user ? getUserStats(user) : null;
 
@@ -198,14 +249,54 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* Tips */}
+        {/* Achievements Section */}
         <Animated.View
-          entering={FadeInDown.delay(400).springify()}
+          entering={FadeInDown.delay(350).springify()}
           style={{
             backgroundColor: '#ffffff',
             borderRadius: 16,
             padding: 20,
             marginTop: 20,
+          }}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Text 
+              style={{ 
+                fontFamily: 'Righteous_400Regular',
+                fontSize: 18,
+                color: '#18181b',
+              }}
+            >
+              Achievements
+            </Text>
+            <View style={{ backgroundColor: '#F59E0B', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+              <Text style={{ fontFamily: 'Poppins_700Bold', fontSize: 12, color: '#ffffff' }}>
+                {unlockedCount}/{totalCount}
+              </Text>
+            </View>
+          </View>
+          
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' }}>
+            {achievements.map((achievement, index) => (
+              <AchievementBadge
+                key={achievement.id}
+                achievement={achievement}
+                unlocked={achievement.unlocked}
+                delay={400 + index * 30}
+              />
+            ))}
+          </View>
+        </Animated.View>
+
+        {/* Tips */}
+        <Animated.View
+          entering={FadeInDown.delay(600).springify()}
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 16,
+            padding: 20,
+            marginTop: 20,
+            marginBottom: 20,
           }}
         >
           <Text 

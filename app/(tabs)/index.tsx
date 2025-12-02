@@ -8,10 +8,12 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { useAuth } from '../../hooks/useAuth';
 import { useQuestions } from '../../hooks/useQuestions';
 import { useVote } from '../../hooks/useVote';
+import { useAchievements } from '../../hooks/useAchievements';
 import { AppHeader } from '../../components/AppHeader';
 import { UserMenu } from '../../components/UserMenu';
 import { QuestionCard } from '../../components/QuestionCard';
 import { VoteButtons } from '../../components/VoteButtons';
+import { AchievementToast } from '../../components/AchievementToast';
 import type { VoteChoice } from '../../types';
 
 export default function FeedScreen() {
@@ -26,8 +28,20 @@ export default function FeedScreen() {
   } = useQuestions(uid);
   
   const { vote, result: voteResult, loading: voteLoading, reset: resetVote } = useVote();
+  const { newlyUnlocked, clearNewlyUnlocked } = useAchievements(uid, user);
   const [showingResult, setShowingResult] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
+
+  // Handle achievement toast dismissal
+  const handleAchievementDismiss = useCallback(() => {
+    if (currentAchievementIndex < newlyUnlocked.length - 1) {
+      setCurrentAchievementIndex(prev => prev + 1);
+    } else {
+      clearNewlyUnlocked();
+      setCurrentAchievementIndex(0);
+    }
+  }, [currentAchievementIndex, newlyUnlocked.length, clearNewlyUnlocked]);
 
   const handleVote = useCallback(async (choice: VoteChoice) => {
     if (!uid || !currentQuestion || voteLoading || showingResult) return;
@@ -222,6 +236,15 @@ export default function FeedScreen() {
         score={user?.score ?? 0}
         questionsCreated={user?.questions_created ?? 0}
       />
+
+      {/* Achievement Toast */}
+      {newlyUnlocked.length > 0 && (
+        <AchievementToast
+          key={newlyUnlocked[currentAchievementIndex].id}
+          achievement={newlyUnlocked[currentAchievementIndex]}
+          onDismiss={handleAchievementDismiss}
+        />
+      )}
     </SafeAreaView>
   );
 }
