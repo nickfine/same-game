@@ -12,6 +12,7 @@ import {
 } from '@expo-google-fonts/poppins';
 import { Righteous_400Regular } from '@expo-google-fonts/righteous';
 import { useAuth } from '../hooks/useAuth';
+import { initializeSoundSettings } from '../hooks/useSound';
 import '../global.css';
 
 // Keep splash screen visible while loading
@@ -29,10 +30,15 @@ export default function RootLayout() {
   const [appReady, setAppReady] = useState(false);
 
   useEffect(() => {
-    if (fontsLoaded && !authLoading) {
-      setAppReady(true);
-      SplashScreen.hideAsync();
+    async function prepareApp() {
+      if (fontsLoaded && !authLoading) {
+        // Initialize sound settings before app is ready
+        await initializeSoundSettings();
+        setAppReady(true);
+        SplashScreen.hideAsync();
+      }
     }
+    prepareApp();
   }, [fontsLoaded, authLoading]);
 
   if (!appReady) {
@@ -105,6 +111,13 @@ export default function RootLayout() {
         />
         <Stack.Screen 
           name="about" 
+          options={{
+            presentation: 'card',
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen 
+          name="leaderboard" 
           options={{
             presentation: 'card',
             animation: 'slide_from_right',

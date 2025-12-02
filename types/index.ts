@@ -2,6 +2,7 @@ import { Timestamp } from 'firebase/firestore';
 
 export interface User {
   uid: string;
+  display_name: string | null; // Player nickname
   score: number;
   questions_created: number;
   questions_created_today: number;
@@ -11,6 +12,18 @@ export interface User {
   current_streak: number;
   best_streak: number;
   last_active: Timestamp | null;
+}
+
+// Leaderboard entry (public user data)
+export interface LeaderboardEntry {
+  uid: string;
+  display_name: string;
+  score: number;
+  votes_won: number;
+  votes_cast: number;
+  win_rate: number;
+  best_streak: number;
+  rank: number;
 }
 
 export interface UserStats {

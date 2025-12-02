@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Pressable, ScrollView, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -7,7 +7,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useAuth } from '../hooks/useAuth';
 import { useAchievements } from '../hooks/useAchievements';
-import { getUserStats } from '../lib/firestore';
+import { getUserStats, updateDisplayName } from '../lib/firestore';
 import type { Achievement } from '../types';
 
 interface StatCardProps {
@@ -121,12 +121,52 @@ function AchievementBadge({
 export default function ProfileScreen() {
   const { user, uid } = useAuth();
   const { achievements, unlockedCount, totalCount } = useAchievements(uid, user);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [saving, setSaving] = useState(false);
   
   const stats = user ? getUserStats(user) : null;
 
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
+  };
+
+  const handleEditName = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setNewName(user?.display_name || '');
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    if (!uid || !newName.trim()) return;
+    
+    // Validate name
+    if (newName.trim().length < 2) {
+      Alert.alert('Too Short', 'Name must be at least 2 characters');
+      return;
+    }
+    if (newName.trim().length > 20) {
+      Alert.alert('Too Long', 'Name must be 20 characters or less');
+      return;
+    }
+    
+    setSaving(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    try {
+      await updateDisplayName(uid, newName.trim());
+      setIsEditingName(false);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update name');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsEditingName(false);
   };
 
   return (
@@ -170,9 +210,98 @@ export default function ProfileScreen() {
         contentContainerStyle={{ padding: 20 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Score Hero */}
+        {/* Player Name Card */}
         <Animated.View
           entering={FadeInDown.delay(0).springify()}
+          style={{
+            backgroundColor: '#6366F1',
+            borderRadius: 20,
+            padding: 20,
+            marginBottom: 16,
+            alignItems: 'center',
+          }}
+        >
+          {isEditingName ? (
+            <View style={{ width: '100%' }}>
+              <TextInput
+                value={newName}
+                onChangeText={setNewName}
+                placeholder="Enter your name"
+                placeholderTextColor="rgba(255,255,255,0.5)"
+                autoFocus
+                maxLength={20}
+                style={{
+                  fontFamily: 'Poppins_700Bold',
+                  fontSize: 24,
+                  color: '#ffffff',
+                  textAlign: 'center',
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  borderRadius: 12,
+                  padding: 12,
+                  marginBottom: 12,
+                }}
+              />
+              <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'center' }}>
+                <Pressable
+                  onPress={handleCancelEdit}
+                  style={{
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    paddingHorizontal: 20,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                  }}
+                >
+                  <Text style={{ fontFamily: 'Poppins_700Bold', color: '#fff', fontSize: 14 }}>
+                    Cancel
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleSaveName}
+                  disabled={saving || !newName.trim()}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    paddingHorizontal: 20,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    opacity: saving || !newName.trim() ? 0.5 : 1,
+                  }}
+                >
+                  <Text style={{ fontFamily: 'Poppins_700Bold', color: '#6366F1', fontSize: 14 }}>
+                    {saving ? 'Saving...' : 'Save'}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <>
+              <Text
+                style={{
+                  fontFamily: 'Righteous_400Regular',
+                  fontSize: 28,
+                  color: '#ffffff',
+                  marginBottom: 4,
+                }}
+              >
+                {user?.display_name || 'Anonymous'}
+              </Text>
+              <Pressable onPress={handleEditName}>
+                <Text
+                  style={{
+                    fontFamily: 'Poppins_400Regular',
+                    fontSize: 14,
+                    color: 'rgba(255,255,255,0.7)',
+                  }}
+                >
+                  ✏️ Tap to edit name
+                </Text>
+              </Pressable>
+            </>
+          )}
+        </Animated.View>
+
+        {/* Score Hero */}
+        <Animated.View
+          entering={FadeInDown.delay(50).springify()}
           style={{
             backgroundColor: '#18181b',
             borderRadius: 24,
@@ -219,39 +348,39 @@ export default function ProfileScreen() {
             value={`${stats?.win_rate ?? 0}%`}
             sublabel={`${stats?.votes_won ?? 0} wins`}
             color="#00E054"
-            delay={100}
+            delay={150}
           />
           <StatCard 
             label="Votes Cast" 
             value={stats?.votes_cast ?? 0}
             sublabel="total predictions"
-            delay={150}
+            delay={200}
           />
           <StatCard 
             label="Current Streak" 
             value={stats?.current_streak ?? 0}
             sublabel="consecutive wins"
             color={stats?.current_streak && stats.current_streak > 0 ? '#F59E0B' : '#18181b'}
-            delay={200}
+            delay={250}
           />
           <StatCard 
             label="Best Streak" 
             value={stats?.best_streak ?? 0}
             sublabel="personal record"
             color="#6366F1"
-            delay={250}
+            delay={300}
           />
           <StatCard 
             label="Questions" 
             value={stats?.questions_created ?? 0}
             sublabel="created by you"
-            delay={300}
+            delay={350}
           />
         </View>
 
         {/* Achievements Section */}
         <Animated.View
-          entering={FadeInDown.delay(350).springify()}
+          entering={FadeInDown.delay(400).springify()}
           style={{
             backgroundColor: '#ffffff',
             borderRadius: 16,
@@ -282,7 +411,7 @@ export default function ProfileScreen() {
                 key={achievement.id}
                 achievement={achievement}
                 unlocked={achievement.unlocked}
-                delay={400 + index * 30}
+                delay={450 + index * 30}
               />
             ))}
           </View>
@@ -290,7 +419,7 @@ export default function ProfileScreen() {
 
         {/* Tips */}
         <Animated.View
-          entering={FadeInDown.delay(600).springify()}
+          entering={FadeInDown.delay(650).springify()}
           style={{
             backgroundColor: '#ffffff',
             borderRadius: 16,

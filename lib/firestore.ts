@@ -19,7 +19,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { STARTING_SCORE, QUESTION_CREATION_COST, DAILY_QUESTION_LIMIT } from './constants';
-import type { User, Question, Vote, VoteChoice, CreateQuestionInput, VoteResult, VoteHistoryItem, UserStats } from '../types';
+import type { User, Question, Vote, VoteChoice, CreateQuestionInput, VoteResult, VoteHistoryItem, UserStats, LeaderboardEntry } from '../types';
 
 // Collection references
 export const usersCollection = collection(db, 'users');
@@ -31,6 +31,16 @@ export const getUserRef = (uid: string) => doc(usersCollection, uid);
 export const getQuestionRef = (id: string) => doc(questionsCollection, id);
 export const getVoteRef = (uid: string, questionId: string) => doc(votesCollection, `${uid}_${questionId}`);
 
+// Generate a random player name
+function generatePlayerName(): string {
+  const adjectives = ['Swift', 'Clever', 'Lucky', 'Bold', 'Wise', 'Quick', 'Sharp', 'Keen', 'Bright', 'Cool'];
+  const nouns = ['Fox', 'Owl', 'Wolf', 'Bear', 'Eagle', 'Tiger', 'Hawk', 'Lion', 'Raven', 'Falcon'];
+  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  const num = Math.floor(Math.random() * 100);
+  return `${adj}${noun}${num}`;
+}
+
 // Create or get user document
 export async function getOrCreateUser(uid: string): Promise<User> {
   const userRef = getUserRef(uid);
@@ -40,6 +50,7 @@ export async function getOrCreateUser(uid: string): Promise<User> {
     const data = userSnap.data();
     return { 
       uid, 
+      display_name: data.display_name ?? null,
       score: data.score ?? STARTING_SCORE,
       questions_created: data.questions_created ?? 0,
       questions_created_today: data.questions_created_today ?? 0,
@@ -52,8 +63,9 @@ export async function getOrCreateUser(uid: string): Promise<User> {
     } as User;
   }
   
-  // Create new user with starting points
+  // Create new user with starting points and random name
   const newUser: Omit<User, 'uid'> = {
+    display_name: generatePlayerName(),
     score: STARTING_SCORE,
     questions_created: 0,
     questions_created_today: 0,
@@ -77,6 +89,7 @@ export function subscribeToUser(uid: string, callback: (user: User | null) => vo
       const data = snap.data();
       callback({ 
         uid, 
+        display_name: data.display_name ?? null,
         score: data.score ?? STARTING_SCORE,
         questions_created: data.questions_created ?? 0,
         questions_created_today: data.questions_created_today ?? 0,
@@ -380,4 +393,58 @@ export async function hasVoted(uid: string, questionId: string): Promise<boolean
   const voteRef = getVoteRef(uid, questionId);
   const voteSnap = await getDoc(voteRef);
   return voteSnap.exists();
+}
+
+// Get leaderboard (top users by score)
+export async function getLeaderboard(limitCount: number = 50): Promise<LeaderboardEntry[]> {
+  const leaderboardQuery = query(
+    usersCollection,
+    orderBy('score', 'desc'),
+    limit(limitCount)
+  );
+  
+  const snapshot = await getDocs(leaderboardQuery);
+  
+  return snapshot.docs.map((doc, index) => {
+    const data = doc.data();
+    const votesCast = data.votes_cast ?? 0;
+    const votesWon = data.votes_won ?? 0;
+    const winRate = votesCast > 0 ? Math.round((votesWon / votesCast) * 100) : 0;
+    
+    return {
+      uid: doc.id,
+      display_name: data.display_name || `Player${doc.id.slice(-4)}`,
+      score: data.score ?? 0,
+      votes_won: votesWon,
+      votes_cast: votesCast,
+      win_rate: winRate,
+      best_streak: data.best_streak ?? 0,
+      rank: index + 1,
+    };
+  });
+}
+
+// Get user's rank on leaderboard
+export async function getUserRank(uid: string): Promise<number | null> {
+  const userRef = getUserRef(uid);
+  const userSnap = await getDoc(userRef);
+  
+  if (!userSnap.exists()) return null;
+  
+  const userScore = userSnap.data().score ?? 0;
+  
+  // Count users with higher score
+  const higherScoreQuery = query(
+    usersCollection,
+    where('score', '>', userScore)
+  );
+  
+  const higherSnap = await getDocs(higherScoreQuery);
+  return higherSnap.size + 1;
+}
+
+// Update user's display name
+export async function updateDisplayName(uid: string, displayName: string): Promise<void> {
+  const userRef = getUserRef(uid);
+  await setDoc(userRef, { display_name: displayName }, { merge: true });
 }

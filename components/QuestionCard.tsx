@@ -9,6 +9,7 @@ import Animated, {
   FadeIn,
 } from 'react-native-reanimated';
 import { ShareButton } from './ShareButton';
+import { playSoundGlobal } from '../hooks/useSound';
 import type { Question, VoteResult } from '../types';
 
 const { width } = Dimensions.get('window');
@@ -26,6 +27,9 @@ export function QuestionCard({ question, voteResult, onAnimationComplete }: Ques
 
   useEffect(() => {
     if (voteResult && onAnimationComplete) {
+      // Play sound based on result
+      playSoundGlobal(voteResult.won ? 'win' : 'lose');
+      
       // After showing result, slide out (longer time to allow sharing)
       const timer = setTimeout(() => {
         translateX.value = withTiming(-width, { duration: 300 }, () => {

@@ -4,12 +4,11 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withDelay,
-  withSequence,
   withTiming,
   runOnJS,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { playSoundGlobal } from '../hooks/useSound';
 import type { Achievement } from '../types';
 
 interface AchievementToastProps {
@@ -23,8 +22,9 @@ export function AchievementToast({ achievement, onDismiss }: AchievementToastPro
   const opacity = useSharedValue(0);
 
   useEffect(() => {
-    // Play success haptic
+    // Play success haptic and sound
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    playSoundGlobal('achievement');
 
     // Animate in
     translateY.value = withSpring(0, { damping: 15, stiffness: 150 });

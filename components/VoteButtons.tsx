@@ -7,6 +7,7 @@ import Animated, {
   FadeOut,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { playSoundGlobal } from '../hooks/useSound';
 import type { VoteChoice } from '../types';
 
 interface VoteButtonsProps {
@@ -43,6 +44,7 @@ export function VoteButtons({ optionA, optionB, onVote, disabled, hidden }: Vote
   const handlePress = (choice: VoteChoice) => {
     if (disabled) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    playSoundGlobal('tap');
     onVote(choice);
   };
 

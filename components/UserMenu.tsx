@@ -197,6 +197,12 @@ export function UserMenu({ visible, onClose, score, questionsCreated }: UserMenu
             onPress={() => handleNavigate('/profile')}
           />
           <MenuItem 
+            icon="🏆" 
+            label="Leaderboard" 
+            sublabel="Top players ranked"
+            onPress={() => handleNavigate('/leaderboard')}
+          />
+          <MenuItem 
             icon="📜" 
             label="Vote History" 
             sublabel="Questions you've answered"
@@ -251,7 +257,7 @@ export function UserMenu({ visible, onClose, score, questionsCreated }: UserMenu
               textAlign: 'center',
             }}
           >
-            SAME v1.0.0
+            SAME v1.5.0
           </Text>
         </View>
       </Animated.View>
