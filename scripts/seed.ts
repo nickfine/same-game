@@ -50,58 +50,49 @@ if (!firebaseConfig.projectId) {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Seed data from the product spec
+// Seed data - diverse questions for engagement
 const seedQuestions = [
-  {
-    text: "Cats or Dogs?",
-    option_a: "Cats",
-    option_b: "Dogs",
-  },
-  {
-    text: "Pineapple on Pizza?",
-    option_a: "Yes",
-    option_b: "No",
-  },
-  {
-    text: "Toilet Paper: Over or Under?",
-    option_a: "Over",
-    option_b: "Under",
-  },
-  {
-    text: "Morning or Night Person?",
-    option_a: "Early Bird",
-    option_b: "Night Owl",
-  },
-  {
-    text: "Coffee or Tea?",
-    option_a: "Coffee",
-    option_b: "Tea",
-  },
-  {
-    text: "Would you rather have...",
-    option_a: "Invisibility",
-    option_b: "Flight",
-  },
-  {
-    text: "Gaming Platform?",
-    option_a: "Console",
-    option_b: "PC",
-  },
-  {
-    text: "Smartphone?",
-    option_a: "iPhone",
-    option_b: "Android",
-  },
-  {
-    text: "Friday Night Plans?",
-    option_a: "Go Out",
-    option_b: "Stay In",
-  },
-  {
-    text: "Would you rather have...",
-    option_a: "Money",
-    option_b: "Fame",
-  },
+  // Classic debates
+  { text: "Cats or Dogs?", option_a: "Cats", option_b: "Dogs" },
+  { text: "Pineapple on Pizza?", option_a: "Yes", option_b: "No" },
+  { text: "Toilet Paper: Over or Under?", option_a: "Over", option_b: "Under" },
+  { text: "is a hotdog a sandwich?", option_a: "Yes", option_b: "No" },
+  { text: "GIF pronunciation?", option_a: "Jif", option_b: "Gif" },
+  
+  // Lifestyle
+  { text: "Morning or Night Person?", option_a: "Early Bird", option_b: "Night Owl" },
+  { text: "Coffee or Tea?", option_a: "Coffee", option_b: "Tea" },
+  { text: "Friday Night Plans?", option_a: "Go Out", option_b: "Stay In" },
+  { text: "Vacation preference?", option_a: "Beach", option_b: "Mountains" },
+  { text: "How do you recharge?", option_a: "Alone Time", option_b: "With Friends" },
+  
+  // Tech
+  { text: "Smartphone?", option_a: "iPhone", option_b: "Android" },
+  { text: "Gaming Platform?", option_a: "Console", option_b: "PC" },
+  { text: "Social Media?", option_a: "TikTok", option_b: "Instagram" },
+  { text: "Music streaming?", option_a: "Spotify", option_b: "Apple Music" },
+  { text: "Browser?", option_a: "Chrome", option_b: "Safari" },
+  
+  // Would you rather
+  { text: "Would you rather have...", option_a: "Invisibility", option_b: "Flight" },
+  { text: "Would you rather have...", option_a: "More Money", option_b: "More Time" },
+  { text: "Would you rather...", option_a: "Know Future", option_b: "Change Past" },
+  { text: "Would you rather be...", option_a: "Too Hot", option_b: "Too Cold" },
+  { text: "Would you rather...", option_a: "No Phone", option_b: "No Internet" },
+  
+  // Food
+  { text: "Pizza crust?", option_a: "Thin", option_b: "Thick" },
+  { text: "Chocolate?", option_a: "Milk", option_b: "Dark" },
+  { text: "Breakfast food?", option_a: "Sweet", option_b: "Savory" },
+  { text: "Sushi?", option_a: "Love it", option_b: "Hate it" },
+  { text: "Cereal first?", option_a: "Cereal", option_b: "Milk" },
+  
+  // Pop culture
+  { text: "Star Wars or Star Trek?", option_a: "Wars", option_b: "Trek" },
+  { text: "Marvel or DC?", option_a: "Marvel", option_b: "DC" },
+  { text: "The Office?", option_a: "US", option_b: "UK" },
+  { text: "Hogwarts house?", option_a: "Gryffindor", option_b: "Slytherin" },
+  { text: "Zombie apocalypse weapon?", option_a: "Sword", option_b: "Gun" },
 ];
 
 // Generate random vote counts for seeding

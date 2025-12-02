@@ -191,17 +191,20 @@ export default function FeedScreen() {
         onMenuPress={handleMenuOpen}
       />
 
-      {/* Question Card */}
-      {currentQuestion && (
-        <QuestionCard 
-          key={currentQuestion.id}
-          question={currentQuestion}
-          voteResult={voteResult}
-          onAnimationComplete={handleAnimationComplete}
-        />
-      )}
+      {/* Main Content Area */}
+      <View style={{ flex: 1, justifyContent: 'center' }}>
+        {/* Question Card */}
+        {currentQuestion && (
+          <QuestionCard 
+            key={currentQuestion.id}
+            question={currentQuestion}
+            voteResult={voteResult}
+            onAnimationComplete={handleAnimationComplete}
+          />
+        )}
+      </View>
 
-      {/* Vote Buttons */}
+      {/* Vote Buttons - Fixed at bottom */}
       {currentQuestion && (
         <VoteButtons
           optionA={currentQuestion.option_a}

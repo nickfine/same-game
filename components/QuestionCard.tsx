@@ -44,12 +44,16 @@ export function QuestionCard({ question, voteResult, onAnimationComplete }: Ques
   return (
     <Animated.View 
       entering={SlideInRight.springify().damping(20)}
-      style={cardStyle}
-      className="flex-1 mx-4 my-2"
+      style={[cardStyle, { marginHorizontal: 16, marginVertical: 8 }]}
     >
       <View 
-        className="flex-1 bg-white rounded-3xl shadow-lg justify-center items-center p-8"
         style={{
+          backgroundColor: '#ffffff',
+          borderRadius: 24,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 32,
+          minHeight: 300,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.1,
@@ -59,8 +63,13 @@ export function QuestionCard({ question, voteResult, onAnimationComplete }: Ques
       >
         {/* Question Text */}
         <Text 
-          className="text-3xl text-center text-text leading-tight"
-          style={{ fontFamily: 'Righteous_400Regular' }}
+          style={{ 
+            fontSize: 28, 
+            textAlign: 'center', 
+            color: '#18181b',
+            lineHeight: 36,
+            fontFamily: 'Righteous_400Regular' 
+          }}
         >
           {question.text}
         </Text>
@@ -69,48 +78,58 @@ export function QuestionCard({ question, voteResult, onAnimationComplete }: Ques
         {voteResult && (
           <Animated.View 
             entering={FadeIn.duration(200)}
-            className="absolute inset-0 rounded-3xl justify-center items-center"
             style={{ 
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              borderRadius: 24,
+              justifyContent: 'center',
+              alignItems: 'center',
               backgroundColor: voteResult.won ? 'rgba(0, 224, 84, 0.95)' : 'rgba(255, 0, 85, 0.95)',
             }}
           >
             {/* Result Text */}
             <Text 
-              className="text-6xl text-white mb-8"
-              style={{ fontFamily: 'Righteous_400Regular', letterSpacing: 4 }}
+              style={{ 
+                fontSize: 56, 
+                color: '#ffffff', 
+                marginBottom: 32,
+                fontFamily: 'Righteous_400Regular', 
+                letterSpacing: 4 
+              }}
             >
               {voteResult.won ? 'SAME!' : 'NOPE'}
             </Text>
             
             {/* Percentage Bars */}
-            <View className="w-full px-8">
-              <View className="flex-row justify-between mb-2">
-                <Text className="text-white text-lg" style={{ fontFamily: 'Poppins_700Bold' }}>
+            <View style={{ width: '100%', paddingHorizontal: 32 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text style={{ color: '#ffffff', fontSize: 16, fontFamily: 'Poppins_700Bold' }}>
                   {question.option_a}
                 </Text>
-                <Text className="text-white text-lg" style={{ fontFamily: 'Poppins_700Bold' }}>
+                <Text style={{ color: '#ffffff', fontSize: 16, fontFamily: 'Poppins_700Bold' }}>
                   {voteResult.percentage_a}%
                 </Text>
               </View>
-              <View className="h-4 bg-white/30 rounded-full overflow-hidden mb-4">
+              <View style={{ height: 16, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 8, overflow: 'hidden', marginBottom: 16 }}>
                 <Animated.View 
-                  className="h-full bg-white rounded-full"
-                  style={{ width: `${voteResult.percentage_a}%` }}
+                  style={{ height: '100%', backgroundColor: '#ffffff', borderRadius: 8, width: `${voteResult.percentage_a}%` }}
                 />
               </View>
               
-              <View className="flex-row justify-between mb-2">
-                <Text className="text-white text-lg" style={{ fontFamily: 'Poppins_700Bold' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text style={{ color: '#ffffff', fontSize: 16, fontFamily: 'Poppins_700Bold' }}>
                   {question.option_b}
                 </Text>
-                <Text className="text-white text-lg" style={{ fontFamily: 'Poppins_700Bold' }}>
+                <Text style={{ color: '#ffffff', fontSize: 16, fontFamily: 'Poppins_700Bold' }}>
                   {voteResult.percentage_b}%
                 </Text>
               </View>
-              <View className="h-4 bg-white/30 rounded-full overflow-hidden">
+              <View style={{ height: 16, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 8, overflow: 'hidden' }}>
                 <Animated.View 
-                  className="h-full bg-white rounded-full"
-                  style={{ width: `${voteResult.percentage_b}%` }}
+                  style={{ height: '100%', backgroundColor: '#ffffff', borderRadius: 8, width: `${voteResult.percentage_b}%` }}
                 />
               </View>
             </View>
