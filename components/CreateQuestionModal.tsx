@@ -19,6 +19,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { QUESTION_CREATION_COST } from '../lib/constants';
 import type { VoteChoice, CreateQuestionInput } from '../types';
 
 interface CreateQuestionModalProps {
@@ -29,7 +30,6 @@ interface CreateQuestionModalProps {
   loading?: boolean;
 }
 
-const CREATION_COST = 3;
 const MAX_QUESTION_LENGTH = 80;
 const MAX_OPTION_LENGTH = 15;
 
@@ -50,7 +50,7 @@ export function CreateQuestionModal({
   const scaleA = useSharedValue(1);
   const scaleB = useSharedValue(1);
 
-  const canAfford = userScore >= CREATION_COST;
+  const canAfford = userScore >= QUESTION_CREATION_COST;
   const isValid = question.trim().length > 0 && 
                   optionA.trim().length > 0 && 
                   optionB.trim().length > 0 && 
@@ -63,7 +63,7 @@ export function CreateQuestionModal({
 
   const handleSubmit = async () => {
     if (!canAfford) {
-      Alert.alert('Not Enough Points', `You need ${CREATION_COST} points to ask a question.`);
+      Alert.alert('Not Enough Points', `You need ${QUESTION_CREATION_COST} points to ask a question.`);
       return;
     }
 
@@ -146,7 +146,7 @@ export function CreateQuestionModal({
                 className={`text-center ${canAfford ? 'text-success' : 'text-fail'}`}
                 style={{ fontFamily: 'Poppins_700Bold' }}
               >
-                Cost: {CREATION_COST} points • You have: {userScore} points
+                Cost: {QUESTION_CREATION_COST} points • You have: {userScore} points
               </Text>
             </View>
 
@@ -254,7 +254,7 @@ export function CreateQuestionModal({
                 className="text-white text-center text-xl"
                 style={{ fontFamily: 'Righteous_400Regular' }}
               >
-                {loading ? 'Posting...' : `Post & Vote (-${CREATION_COST}pts)`}
+                {loading ? 'Posting...' : `Post & Vote (-${QUESTION_CREATION_COST}pts)`}
               </Text>
             </Pressable>
           </ScrollView>

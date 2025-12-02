@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
 import Animated, { 
   useAnimatedStyle, 
@@ -7,7 +7,6 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { useEffect } from 'react';
 
 interface ScoreHeaderProps {
   score: number;

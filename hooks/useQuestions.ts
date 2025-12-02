@@ -50,11 +50,12 @@ export function useQuestions(uid: string | null) {
     }
   }, [uid, lastDoc]);
 
-  // Initial fetch
+  // Initial fetch - only runs when uid changes, not on every fetchQuestions change
   useEffect(() => {
     if (uid) {
       fetchQuestions(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid]);
 
   const nextQuestion = useCallback(() => {

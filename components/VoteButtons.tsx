@@ -1,16 +1,13 @@
 import React from 'react';
-import { View, Text, Pressable, Dimensions } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import Animated, { 
   useAnimatedStyle, 
   withSpring,
   useSharedValue,
-  withTiming,
   FadeOut,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import type { VoteChoice } from '../types';
-
-const { width } = Dimensions.get('window');
 
 interface VoteButtonsProps {
   optionA: string;

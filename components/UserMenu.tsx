@@ -1,11 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, Dimensions } from 'react-native';
 import Animated, { 
-  useAnimatedStyle, 
-  withSpring,
-  withTiming,
-  useSharedValue,
-  runOnJS,
   SlideInLeft,
   SlideOutLeft,
   FadeIn,

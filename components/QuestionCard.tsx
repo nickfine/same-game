@@ -1,16 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, Dimensions } from 'react-native';
 import Animated, { 
   useAnimatedStyle, 
-  withSpring,
   withTiming,
   useSharedValue,
   runOnJS,
   SlideInRight,
-  SlideOutLeft,
   FadeIn,
 } from 'react-native-reanimated';
-import { useEffect } from 'react';
 import type { Question, VoteResult } from '../types';
 
 const { width } = Dimensions.get('window');

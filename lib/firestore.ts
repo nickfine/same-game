@@ -3,7 +3,6 @@ import {
   doc, 
   getDoc, 
   setDoc, 
-  updateDoc,
   query, 
   where, 
   orderBy, 
@@ -19,6 +18,7 @@ import {
   QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { STARTING_SCORE, QUESTION_CREATION_COST, DAILY_QUESTION_LIMIT } from './constants';
 import type { User, Question, Vote, VoteChoice, CreateQuestionInput, VoteResult, VoteHistoryItem, UserStats } from '../types';
 
 // Collection references
@@ -40,7 +40,7 @@ export async function getOrCreateUser(uid: string): Promise<User> {
     const data = userSnap.data();
     return { 
       uid, 
-      score: data.score ?? 3,
+      score: data.score ?? STARTING_SCORE,
       questions_created: data.questions_created ?? 0,
       questions_created_today: data.questions_created_today ?? 0,
       last_question_date: data.last_question_date ?? null,
@@ -52,9 +52,9 @@ export async function getOrCreateUser(uid: string): Promise<User> {
     } as User;
   }
   
-  // Create new user with 3 starting points
+  // Create new user with starting points
   const newUser: Omit<User, 'uid'> = {
-    score: 3,
+    score: STARTING_SCORE,
     questions_created: 0,
     questions_created_today: 0,
     last_question_date: null,
@@ -77,7 +77,7 @@ export function subscribeToUser(uid: string, callback: (user: User | null) => vo
       const data = snap.data();
       callback({ 
         uid, 
-        score: data.score ?? 3,
+        score: data.score ?? STARTING_SCORE,
         questions_created: data.questions_created ?? 0,
         questions_created_today: data.questions_created_today ?? 0,
         last_question_date: data.last_question_date ?? null,
@@ -262,8 +262,6 @@ export async function createQuestion(
   const voteRef = getVoteRef(uid, newQuestionRef.id);
   
   const today = new Date().toISOString().split('T')[0];
-  const DAILY_LIMIT = 5;
-  const CREATION_COST = 3;
   
   return await runTransaction(db, async (transaction) => {
     // Read user document
@@ -276,8 +274,8 @@ export async function createQuestion(
     const userData = userDoc.data() as Omit<User, 'uid'>;
     
     // Check score
-    if (userData.score < CREATION_COST) {
-      throw new Error(`Need ${CREATION_COST} points to ask a question`);
+    if (userData.score < QUESTION_CREATION_COST) {
+      throw new Error(`Need ${QUESTION_CREATION_COST} points to ask a question`);
     }
     
     // Check daily limit
@@ -287,8 +285,8 @@ export async function createQuestion(
       questionsToday = 0;
     }
     
-    if (questionsToday >= DAILY_LIMIT) {
-      throw new Error(`Daily limit reached. You can only create ${DAILY_LIMIT} questions per day.`);
+    if (questionsToday >= DAILY_QUESTION_LIMIT) {
+      throw new Error(`Daily limit reached. You can only create ${DAILY_QUESTION_LIMIT} questions per day.`);
     }
     
     // Create the question with initial vote
@@ -316,7 +314,7 @@ export async function createQuestion(
     
     // Deduct points and update counters
     transaction.update(userRef, {
-      score: increment(-CREATION_COST),
+      score: increment(-QUESTION_CREATION_COST),
       questions_created: increment(1),
       questions_created_today: questionsToday + 1,
       last_question_date: today,
