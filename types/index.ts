@@ -12,6 +12,44 @@ export interface User {
   current_streak: number;
   best_streak: number;
   last_active: Timestamp | null;
+  
+  // Compliance fields
+  birth_date: string | null; // ISO date string (YYYY-MM-DD)
+  is_minor: boolean; // Calculated from birth_date
+  age_verified_at: Timestamp | null; // When age was verified
+  
+  // Daily vote tracking (for minors)
+  votes_today: number;
+  last_vote_date: string | null; // ISO date for daily vote limit tracking
+  
+  // Streak death tracking (for loss aversion)
+  last_dead_streak: number | null; // The streak value when it died
+  streak_death_date: string | null; // ISO date when streak died (for cracked badge)
+}
+
+// Compliance/Playtime tracking (separate collection for weekly resets)
+export interface PlaytimeRecord {
+  uid: string;
+  week_start: string; // ISO date of week start (Monday)
+  total_minutes: number; // Total playtime this week
+  sessions: PlaytimeSession[];
+  last_updated: Timestamp;
+}
+
+export interface PlaytimeSession {
+  start: Timestamp;
+  end: Timestamp | null; // null if session is active
+  duration_minutes: number;
+}
+
+// Local compliance state (stored in AsyncStorage, not Firestore)
+export interface ComplianceState {
+  ageGateCompleted: boolean;
+  birthDate: string | null;
+  isMinor: boolean;
+  lastBreakReminderTime: number | null; // timestamp
+  sessionStartTime: number | null; // timestamp
+  currentSessionMinutes: number;
 }
 
 // Leaderboard entry (public user data)
@@ -70,6 +108,9 @@ export interface VoteResult {
   votes_b: number;
   percentage_a: number;
   percentage_b: number;
+  // Streak tracking for loss aversion UI
+  previousStreak: number; // The streak before this vote
+  newStreak: number; // The streak after this vote
 }
 
 export interface CreateQuestionInput {

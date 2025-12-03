@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -9,12 +9,20 @@ import { useAuth } from '../../hooks/useAuth';
 import { useQuestions } from '../../hooks/useQuestions';
 import { useVote } from '../../hooks/useVote';
 import { useAchievements } from '../../hooks/useAchievements';
+import { useDopamineFeatures } from '../../hooks/useDopamineFeatures';
+import { useStreakManager } from '../../hooks/useStreakManager';
+import { useComplianceContext } from '../../components/ComplianceProvider';
 import { AppHeader } from '../../components/AppHeader';
 import { UserMenu } from '../../components/UserMenu';
 import { QuestionCard } from '../../components/QuestionCard';
 import { VoteButtons } from '../../components/VoteButtons';
 import { AchievementToast } from '../../components/AchievementToast';
+import { MysteryChest } from '../../components/MysteryChest';
+import { DailySpinWheel } from '../../components/DailySpinWheel';
+import { ComboMultiplier } from '../../components/ComboMultiplier';
+import { StreakDeathModal } from '../../components/StreakDeathModal';
 import type { VoteChoice } from '../../types';
+import type { Reward } from '../../lib/rewards';
 
 export default function FeedScreen() {
   const { user, uid } = useAuth();
@@ -27,11 +35,45 @@ export default function FeedScreen() {
     hasMoreQuestions,
   } = useQuestions(uid);
   
-  const { vote, result: voteResult, loading: voteLoading, reset: resetVote } = useVote();
+  const { vote, result: voteResult, loading: voteLoading, reset: resetVote, error: voteError } = useVote();
   const { newlyUnlocked, clearNewlyUnlocked } = useAchievements(uid, user);
+  const { canVote, remainingVotes, showDailyVoteLimitModal, isMinor } = useComplianceContext();
+  
+  // Dopamine features
+  const {
+    canSpin,
+    showChest,
+    showSpin,
+    powerUps,
+    activeMultiplier,
+    onVoteComplete,
+    onChestClaimed,
+    openDailySpin,
+    onSpinClaimed,
+    closeChest,
+    closeSpin,
+    useStreakFreezeItem,
+  } = useDopamineFeatures();
+
+  // Streak death management (loss aversion)
+  const hasStreakFreeze = powerUps.streakFreeze > 0;
+  const {
+    showDeathModal,
+    deadStreak,
+    daysSinceDeath,
+    showCrackedBadge,
+    lastDeadStreak,
+    handleStreakDeath,
+    useStreakFreeze,
+    acceptStreakDeath,
+    closeDeathModal,
+  } = useStreakManager(user, hasStreakFreeze);
+  
   const [showingResult, setShowingResult] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
+  const [comboActive, setComboActive] = useState(false);
+  const [pendingChestReward, setPendingChestReward] = useState<Reward | null>(null);
 
   // Handle achievement toast dismissal
   const handleAchievementDismiss = useCallback(() => {
@@ -46,15 +88,83 @@ export default function FeedScreen() {
   const handleVote = useCallback(async (choice: VoteChoice) => {
     if (!uid || !currentQuestion || voteLoading || showingResult) return;
     
+    // Check daily vote limit for minors
+    if (!canVote) {
+      showDailyVoteLimitModal();
+      return;
+    }
+    
     setShowingResult(true);
-    await vote(uid, currentQuestion.id, choice);
-  }, [uid, currentQuestion, vote, voteLoading, showingResult]);
+    setComboActive(true); // Activate combo timer
+    const result = await vote(uid, currentQuestion.id, choice);
+    
+    // Check if vote failed due to daily limit
+    if (!result && voteError === 'DAILY_LIMIT_REACHED') {
+      setShowingResult(false);
+      setComboActive(false);
+      showDailyVoteLimitModal();
+      return;
+    }
+    
+    // Check for streak death (loss aversion trigger)
+    if (result && !result.won && result.previousStreak > 0) {
+      // User lost with an active streak - trigger death modal after animation
+      setTimeout(() => {
+        handleStreakDeath(result.previousStreak);
+      }, 1500); // Show after result animation completes
+    }
+    
+    // Check for mystery chest after vote
+    if (result && user) {
+      const shouldShowChest = onVoteComplete(user.votes_cast + 1, result.won);
+      // Chest will show after result animation completes
+    }
+  }, [uid, currentQuestion, vote, voteLoading, showingResult, canVote, showDailyVoteLimitModal, voteError, user, onVoteComplete, handleStreakDeath]);
 
   const handleAnimationComplete = useCallback(() => {
     resetVote();
     setShowingResult(false);
+    // Don't advance to next question if chest is about to show
+    if (!showChest) {
+      nextQuestion();
+    }
+  }, [resetVote, nextQuestion, showChest]);
+
+  // Handle chest reward claimed
+  const handleChestReward = useCallback((reward: Reward) => {
+    if (user) {
+      onChestClaimed(reward, user.votes_cast);
+      // TODO: Apply points reward to user score if reward.type === 'points'
+    }
     nextQuestion();
-  }, [resetVote, nextQuestion]);
+  }, [user, onChestClaimed, nextQuestion]);
+
+  // Handle spin reward claimed  
+  const handleSpinReward = useCallback((reward: Reward) => {
+    onSpinClaimed(reward);
+    // TODO: Apply points reward to user score if reward.type === 'points'
+  }, [onSpinClaimed]);
+
+  // Handle combo expired
+  const handleComboExpired = useCallback(() => {
+    setComboActive(false);
+  }, []);
+
+  // Handle using a streak freeze
+  const handleUseStreakFreeze = useCallback(async () => {
+    const success = await useStreakFreeze();
+    if (success) {
+      // Consume the streak freeze power-up
+      useStreakFreezeItem();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [useStreakFreeze, useStreakFreezeItem]);
+
+  // Handle accepting streak death
+  const handleAcceptStreakDeath = useCallback(async () => {
+    await acceptStreakDeath();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+  }, [acceptStreakDeath]);
 
   const handleRefresh = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -205,6 +315,78 @@ export default function FeedScreen() {
         onMenuPress={handleMenuOpen}
       />
 
+      {/* Daily Spin Button - Shows when spin is available */}
+      {canSpin && (
+        <Pressable
+          onPress={openDailySpin}
+          style={{
+            position: 'absolute',
+            top: 60,
+            right: 16,
+            backgroundColor: '#F59E0B',
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 20,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            shadowColor: '#F59E0B',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.4,
+            shadowRadius: 8,
+            zIndex: 10,
+          }}
+        >
+          <Text style={{ fontSize: 16 }}>🎰</Text>
+          <Text style={{ 
+            color: '#fff', 
+            fontSize: 12, 
+            fontFamily: 'Righteous_400Regular',
+          }}>
+            SPIN!
+          </Text>
+        </Pressable>
+      )}
+
+      {/* Combo Multiplier Bar */}
+      {(user?.current_streak ?? 0) >= 1 && (
+        <View style={{ 
+          position: 'absolute', 
+          top: 100, 
+          left: 0, 
+          right: 0,
+          zIndex: 5,
+        }}>
+          <ComboMultiplier
+            streak={user?.current_streak ?? 0}
+            isActive={comboActive}
+            onComboExpired={handleComboExpired}
+          />
+        </View>
+      )}
+
+      {/* Active Multiplier Indicator */}
+      {activeMultiplier > 1 && (
+        <View style={{
+          position: 'absolute',
+          top: 60,
+          left: 16,
+          backgroundColor: '#8B5CF6',
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 16,
+          zIndex: 10,
+        }}>
+          <Text style={{ 
+            color: '#fff', 
+            fontSize: 14, 
+            fontFamily: 'Righteous_400Regular',
+          }}>
+            🚀 {activeMultiplier}x
+          </Text>
+        </View>
+      )}
+
       {/* Main Content Area */}
       <View style={{ flex: 1, justifyContent: 'center' }}>
         {/* Question Card */}
@@ -245,6 +427,31 @@ export default function FeedScreen() {
           onDismiss={handleAchievementDismiss}
         />
       )}
+
+      {/* Mystery Chest Modal */}
+      <MysteryChest
+        visible={showChest}
+        onClose={closeChest}
+        onRewardClaimed={handleChestReward}
+      />
+
+      {/* Daily Spin Wheel Modal */}
+      <DailySpinWheel
+        visible={showSpin}
+        onClose={closeSpin}
+        onRewardClaimed={handleSpinReward}
+      />
+
+      {/* Streak Death Modal (Loss Aversion) */}
+      <StreakDeathModal
+        visible={showDeathModal}
+        deadStreak={deadStreak}
+        hasStreakFreeze={hasStreakFreeze}
+        onUseFreeze={handleUseStreakFreeze}
+        onAcceptDeath={handleAcceptStreakDeath}
+        onClose={closeDeathModal}
+      />
+
     </SafeAreaView>
   );
 }

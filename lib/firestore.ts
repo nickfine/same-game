@@ -18,7 +18,7 @@ import {
   QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { STARTING_SCORE, QUESTION_CREATION_COST, DAILY_QUESTION_LIMIT } from './constants';
+import { STARTING_SCORE, QUESTION_CREATION_COST, DAILY_QUESTION_LIMIT, COMPLIANCE } from './constants';
 import type { User, Question, Vote, VoteChoice, CreateQuestionInput, VoteResult, VoteHistoryItem, UserStats, LeaderboardEntry } from '../types';
 
 // Collection references
@@ -60,6 +60,15 @@ export async function getOrCreateUser(uid: string): Promise<User> {
       current_streak: data.current_streak ?? 0,
       best_streak: data.best_streak ?? 0,
       last_active: data.last_active ?? null,
+      // Compliance fields
+      birth_date: data.birth_date ?? null,
+      is_minor: data.is_minor ?? true,
+      age_verified_at: data.age_verified_at ?? null,
+      votes_today: data.votes_today ?? 0,
+      last_vote_date: data.last_vote_date ?? null,
+      // Streak death tracking
+      last_dead_streak: data.last_dead_streak ?? null,
+      streak_death_date: data.streak_death_date ?? null,
     } as User;
   }
   
@@ -75,6 +84,15 @@ export async function getOrCreateUser(uid: string): Promise<User> {
     current_streak: 0,
     best_streak: 0,
     last_active: null,
+    // Compliance fields - defaults
+    birth_date: null,
+    is_minor: true, // Assume minor until verified
+    age_verified_at: null,
+    votes_today: 0,
+    last_vote_date: null,
+    // Streak death tracking - defaults
+    last_dead_streak: null,
+    streak_death_date: null,
   };
   
   await setDoc(userRef, newUser);
@@ -99,6 +117,15 @@ export function subscribeToUser(uid: string, callback: (user: User | null) => vo
         current_streak: data.current_streak ?? 0,
         best_streak: data.best_streak ?? 0,
         last_active: data.last_active ?? null,
+        // Compliance fields
+        birth_date: data.birth_date ?? null,
+        is_minor: data.is_minor ?? true,
+        age_verified_at: data.age_verified_at ?? null,
+        votes_today: data.votes_today ?? 0,
+        last_vote_date: data.last_vote_date ?? null,
+        // Streak death tracking
+        last_dead_streak: data.last_dead_streak ?? null,
+        streak_death_date: data.streak_death_date ?? null,
       } as User);
     } else {
       callback(null);
@@ -168,6 +195,11 @@ export async function getQuestions(
   return { questions, lastDoc: newLastDoc };
 }
 
+// Get today's date as ISO string
+function getTodayDate(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
 // Vote on a question with transaction (prevents cheating)
 export async function voteOnQuestion(
   uid: string,
@@ -201,6 +233,17 @@ export async function voteOnQuestion(
     
     const question = questionDoc.data() as Omit<Question, 'id'>;
     const userData = userDoc.data() as Omit<User, 'uid'>;
+    
+    // Check daily vote limit for minors
+    const today = getTodayDate();
+    const isNewDay = userData.last_vote_date !== today;
+    const currentVotesToday = isNewDay ? 0 : (userData.votes_today ?? 0);
+    const dailyVoteCap = userData.is_minor ? COMPLIANCE.DAILY_VOTE_CAP_MINOR : COMPLIANCE.DAILY_VOTE_CAP_ADULT;
+    
+    if (currentVotesToday >= dailyVoteCap) {
+      throw new Error('DAILY_LIMIT_REACHED');
+    }
+    
     const currentA = question.votes_a;
     const currentB = question.votes_b;
     
@@ -235,6 +278,9 @@ export async function voteOnQuestion(
       current_streak: newStreak,
       best_streak: newBestStreak,
       last_active: serverTimestamp(),
+      // Daily vote tracking
+      votes_today: isNewDay ? 1 : increment(1),
+      last_vote_date: today,
     };
     
     if (userWins) {
@@ -261,6 +307,9 @@ export async function voteOnQuestion(
       votes_b: newVotesB,
       percentage_a: Math.round((newVotesA / totalVotes) * 100),
       percentage_b: Math.round((newVotesB / totalVotes) * 100),
+      // Streak tracking for loss aversion UI
+      previousStreak: currentStreak,
+      newStreak: newStreak,
     };
   });
 }
@@ -447,4 +496,32 @@ export async function getUserRank(uid: string): Promise<number | null> {
 export async function updateDisplayName(uid: string, displayName: string): Promise<void> {
   const userRef = getUserRef(uid);
   await setDoc(userRef, { display_name: displayName }, { merge: true });
+}
+
+// Update user's compliance/age verification info
+export async function updateUserCompliance(
+  uid: string, 
+  birthDate: string, 
+  isMinor: boolean
+): Promise<void> {
+  const userRef = getUserRef(uid);
+  await setDoc(userRef, { 
+    birth_date: birthDate,
+    is_minor: isMinor,
+    age_verified_at: serverTimestamp(),
+  }, { merge: true });
+}
+
+// Get user's remaining daily votes
+export function getUserRemainingVotes(user: User): number {
+  const today = getTodayDate();
+  const isNewDay = user.last_vote_date !== today;
+  const votesToday = isNewDay ? 0 : (user.votes_today ?? 0);
+  const dailyCap = user.is_minor ? COMPLIANCE.DAILY_VOTE_CAP_MINOR : COMPLIANCE.DAILY_VOTE_CAP_ADULT;
+  return Math.max(0, dailyCap - votesToday);
+}
+
+// Check if user can vote (hasn't hit daily limit)
+export function canUserVote(user: User): boolean {
+  return getUserRemainingVotes(user) > 0;
 }

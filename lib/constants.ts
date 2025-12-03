@@ -5,6 +5,25 @@ export const DAILY_QUESTION_LIMIT = 5;
 export const QUESTIONS_PAGE_SIZE = 20;
 export const HISTORY_PAGE_SIZE = 50;
 
+// Compliance Constants
+export const COMPLIANCE = {
+  // Age restrictions
+  MIN_AGE: 13, // Minimum age to use the app
+  ADULT_AGE: 18, // Age threshold for full access
+  
+  // Playtime limits (in minutes)
+  WEEKLY_PLAYTIME_CAP_MINOR: 180, // 3 hours per week for under-18
+  BREAK_REMINDER_INTERVAL: 45, // Suggest break every 45 minutes
+  BREAK_REMINDER_COOLDOWN: 5, // Don't show another reminder for 5 min after dismissal
+  
+  // Vote limits
+  DAILY_VOTE_CAP_MINOR: 50, // Max votes per day for under-18
+  DAILY_VOTE_CAP_ADULT: 999999, // Effectively unlimited for adults
+  
+  // Warning thresholds
+  PLAYTIME_WARNING_THRESHOLD: 0.9, // Show warning at 90% of cap
+} as const;
+
 // Colors (matching tailwind.config.js)
 export const COLORS = {
   background: '#f4f4f5',
@@ -17,6 +36,8 @@ export const COLORS = {
   mutedLight: '#a1a1aa',
   border: '#e4e4e7',
   white: '#ffffff',
+  warning: '#F59E0B', // Amber for warnings
+  danger: '#DC2626', // Red for limit reached
 } as const;
 
 // Animation Durations (ms)

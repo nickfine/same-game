@@ -11,6 +11,11 @@ service cloud.firestore {
       match /achievements/{achievementId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+      
+      // Allow reading/writing playtime subcollection (for compliance tracking)
+      match /playtime/{weekId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
     
     // Allow authenticated users to read all questions and update vote counts
@@ -29,5 +34,6 @@ service cloud.firestore {
                       request.resource.data.uid == request.auth.uid;
       allow update, delete: if false;
     }
+    
   }
 }
