@@ -367,6 +367,9 @@ export default function FeedScreen() {
       <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f4f5' }}>
         <AppHeader 
           score={user?.score ?? 0} 
+          currentStreak={user?.current_streak ?? 0}
+          lastDeadStreak={lastDeadStreak}
+          daysSinceDeath={daysSinceDeath}
           onMenuPress={handleMenuOpen}
         />
         
@@ -431,9 +434,12 @@ export default function FeedScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f4f5' }}>
-      {/* App Header */}
+      {/* App Header with Streak Meter */}
       <AppHeader 
         score={user?.score ?? 0} 
+        currentStreak={user?.current_streak ?? 0}
+        lastDeadStreak={lastDeadStreak}
+        daysSinceDeath={daysSinceDeath}
         onMenuPress={handleMenuOpen}
       />
 

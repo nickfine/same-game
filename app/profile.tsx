@@ -7,7 +7,9 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useAuth } from '../hooks/useAuth';
 import { useAchievements } from '../hooks/useAchievements';
+import { useStreakManager } from '../hooks/useStreakManager';
 import { getUserStats, updateDisplayName } from '../lib/firestore';
+import { StreakMeter } from '../components/StreakMeter';
 import type { Achievement } from '../types';
 
 interface StatCardProps {
@@ -121,6 +123,7 @@ function AchievementBadge({
 export default function ProfileScreen() {
   const { user, uid } = useAuth();
   const { achievements, unlockedCount, totalCount } = useAchievements(uid, user);
+  const { daysSinceDeath, lastDeadStreak } = useStreakManager(user, false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -297,6 +300,22 @@ export default function ProfileScreen() {
               </Pressable>
             </>
           )}
+        </Animated.View>
+
+        {/* Streak Meter */}
+        <Animated.View
+          entering={FadeInDown.delay(25).springify()}
+          style={{
+            alignItems: 'center',
+            marginBottom: 16,
+          }}
+        >
+          <StreakMeter
+            currentStreak={stats?.current_streak ?? 0}
+            bestStreak={stats?.best_streak ?? 0}
+            lastDeadStreak={lastDeadStreak}
+            daysSinceDeath={daysSinceDeath}
+          />
         </Animated.View>
 
         {/* Score Hero */}
