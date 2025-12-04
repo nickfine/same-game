@@ -3,27 +3,46 @@ import { View, Text, Dimensions } from 'react-native';
 import Animated, { 
   useAnimatedStyle, 
   withTiming,
+  withSpring,
+  withSequence,
   useSharedValue,
   runOnJS,
   SlideInRight,
   FadeIn,
+  interpolate,
 } from 'react-native-reanimated';
 import { ShareButton } from './ShareButton';
 import { playSoundGlobal } from '../hooks/useSound';
+import { COLORS } from '../lib/constants';
 import type { Question, VoteResult } from '../types';
 
 const { width } = Dimensions.get('window');
 const RESULT_DISPLAY_TIME = 2500; // Show result for 2.5 seconds to allow sharing
 
+interface PeekData {
+  percentage_a: number;
+  percentage_b: number;
+  leading: 'a' | 'b' | 'tie';
+}
+
 interface QuestionCardProps {
   question: Question;
   voteResult: VoteResult | null;
+  peekData?: PeekData | null; // Data shown when peek is active
+  doubleDownActive?: boolean; // Show 2x indicator
   onAnimationComplete?: () => void;
 }
 
-export function QuestionCard({ question, voteResult, onAnimationComplete }: QuestionCardProps) {
+export function QuestionCard({ 
+  question, 
+  voteResult, 
+  peekData,
+  doubleDownActive,
+  onAnimationComplete,
+}: QuestionCardProps) {
   const opacity = useSharedValue(1);
   const translateX = useSharedValue(0);
+  const peekPulse = useSharedValue(0);
 
   useEffect(() => {
     if (voteResult && onAnimationComplete) {
@@ -42,9 +61,26 @@ export function QuestionCard({ question, voteResult, onAnimationComplete }: Ques
     }
   }, [voteResult, onAnimationComplete]);
 
+  // Peek pulse animation
+  useEffect(() => {
+    if (peekData) {
+      peekPulse.value = withSequence(
+        withTiming(1, { duration: 300 }),
+        withSpring(0.8, { damping: 10 })
+      );
+    } else {
+      peekPulse.value = 0;
+    }
+  }, [peekData]);
+
   const cardStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ translateX: translateX.value }],
+  }));
+
+  const peekOverlayStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(peekPulse.value, [0, 0.8, 1], [0, 1, 1]),
+    transform: [{ scale: interpolate(peekPulse.value, [0, 1], [0.9, 1]) }],
   }));
 
   return (
@@ -67,6 +103,34 @@ export function QuestionCard({ question, voteResult, onAnimationComplete }: Ques
           elevation: 8,
         }}
       >
+        {/* Double Down Active Badge */}
+        {doubleDownActive && !voteResult && (
+          <Animated.View
+            entering={FadeIn.duration(200)}
+            style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              backgroundColor: '#EC4899',
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              borderRadius: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <Text style={{ fontSize: 14 }}>🎲</Text>
+            <Text style={{ 
+              color: '#fff', 
+              fontSize: 12, 
+              fontFamily: 'Poppins_700Bold' 
+            }}>
+              2x
+            </Text>
+          </Animated.View>
+        )}
+
         {/* Question Text */}
         <Text 
           style={{ 
@@ -79,6 +143,94 @@ export function QuestionCard({ question, voteResult, onAnimationComplete }: Ques
         >
           {question.text}
         </Text>
+
+        {/* Peek Overlay - Shows majority before voting */}
+        {peekData && !voteResult && (
+          <Animated.View 
+            entering={FadeIn.duration(200)}
+            style={[
+              {
+                position: 'absolute',
+                bottom: 16,
+                left: 16,
+                right: 16,
+                backgroundColor: 'rgba(16, 185, 129, 0.95)',
+                borderRadius: 16,
+                padding: 16,
+              },
+              peekOverlayStyle,
+            ]}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 20, marginRight: 8 }}>👁️</Text>
+              <Text style={{ 
+                color: '#fff', 
+                fontSize: 14, 
+                fontFamily: 'Poppins_700Bold' 
+              }}>
+                PEEK ACTIVE
+              </Text>
+            </View>
+
+            {/* Option A */}
+            <View style={{ marginBottom: 8 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                <Text style={{ color: '#fff', fontSize: 13, fontFamily: 'Poppins_600SemiBold' }}>
+                  {question.option_a}
+                </Text>
+                <Text style={{ color: '#fff', fontSize: 13, fontFamily: 'Poppins_700Bold' }}>
+                  {peekData.percentage_a}%
+                  {peekData.leading === 'a' && ' 👑'}
+                </Text>
+              </View>
+              <View style={{ height: 8, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 4, overflow: 'hidden' }}>
+                <View 
+                  style={{ 
+                    height: '100%', 
+                    backgroundColor: peekData.leading === 'a' ? '#FFD700' : '#fff',
+                    borderRadius: 4, 
+                    width: `${peekData.percentage_a}%`,
+                  }}
+                />
+              </View>
+            </View>
+
+            {/* Option B */}
+            <View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                <Text style={{ color: '#fff', fontSize: 13, fontFamily: 'Poppins_600SemiBold' }}>
+                  {question.option_b}
+                </Text>
+                <Text style={{ color: '#fff', fontSize: 13, fontFamily: 'Poppins_700Bold' }}>
+                  {peekData.percentage_b}%
+                  {peekData.leading === 'b' && ' 👑'}
+                </Text>
+              </View>
+              <View style={{ height: 8, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 4, overflow: 'hidden' }}>
+                <View 
+                  style={{ 
+                    height: '100%', 
+                    backgroundColor: peekData.leading === 'b' ? '#FFD700' : '#fff',
+                    borderRadius: 4, 
+                    width: `${peekData.percentage_b}%`,
+                  }}
+                />
+              </View>
+            </View>
+
+            {peekData.leading === 'tie' && (
+              <Text style={{ 
+                color: '#FFD700', 
+                fontSize: 12, 
+                fontFamily: 'Poppins_600SemiBold',
+                textAlign: 'center',
+                marginTop: 8,
+              }}>
+                ⚖️ It's a tie! You decide!
+              </Text>
+            )}
+          </Animated.View>
+        )}
 
         {/* Vote Result Overlay */}
         {voteResult && (

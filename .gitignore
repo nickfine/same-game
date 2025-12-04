@@ -44,3 +44,7 @@ yarn-error.*
 /ios
 /android
 ._*
+
+# Firebase Functions compiled output
+functions/lib/
+functions/node_modules/

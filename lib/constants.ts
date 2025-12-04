@@ -5,6 +5,13 @@ export const DAILY_QUESTION_LIMIT = 5;
 export const QUESTIONS_PAGE_SIZE = 20;
 export const HISTORY_PAGE_SIZE = 50;
 
+// Power-Up Costs (points required to use)
+export const POWER_UP_COSTS = {
+  PEEK: 4,        // See majority before voting
+  SKIP: 1,        // Skip question without streak penalty
+  DOUBLE_DOWN: 3, // Double points on next vote (win or lose)
+} as const;
+
 // Compliance Constants
 export const COMPLIANCE = {
   // Age restrictions

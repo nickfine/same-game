@@ -21,8 +21,17 @@ import { MysteryChest } from '../../components/MysteryChest';
 import { DailySpinWheel } from '../../components/DailySpinWheel';
 import { ComboMultiplier } from '../../components/ComboMultiplier';
 import { StreakDeathModal } from '../../components/StreakDeathModal';
+import { PowerUpBar } from '../../components/PowerUpBar';
+import { deductUserScore } from '../../lib/firestore';
 import type { VoteChoice } from '../../types';
 import type { Reward } from '../../lib/rewards';
+
+// Peek data interface
+interface PeekData {
+  percentage_a: number;
+  percentage_b: number;
+  leading: 'a' | 'b' | 'tie';
+}
 
 export default function FeedScreen() {
   const { user, uid } = useAuth();
@@ -46,6 +55,8 @@ export default function FeedScreen() {
     showSpin,
     powerUps,
     activeMultiplier,
+    doubleDownActive,
+    peekActive,
     onVoteComplete,
     onChestClaimed,
     openDailySpin,
@@ -53,7 +64,15 @@ export default function FeedScreen() {
     closeChest,
     closeSpin,
     useStreakFreezeItem,
+    activatePeek,
+    deactivatePeek,
+    activateDoubleDown,
+    activateSkip,
+    clearActiveEffects,
   } = useDopamineFeatures();
+
+  // Peek data state
+  const [peekData, setPeekData] = useState<PeekData | null>(null);
 
   // Streak death management (loss aversion)
   const hasStreakFreeze = powerUps.streakFreeze > 0;
@@ -119,7 +138,11 @@ export default function FeedScreen() {
       const shouldShowChest = onVoteComplete(user.votes_cast + 1, result.won);
       // Chest will show after result animation completes
     }
-  }, [uid, currentQuestion, vote, voteLoading, showingResult, canVote, showDailyVoteLimitModal, voteError, user, onVoteComplete, handleStreakDeath]);
+    
+    // Clear active power-up effects after vote
+    clearActiveEffects();
+    setPeekData(null);
+  }, [uid, currentQuestion, vote, voteLoading, showingResult, canVote, showDailyVoteLimitModal, voteError, user, onVoteComplete, handleStreakDeath, clearActiveEffects]);
 
   const handleAnimationComplete = useCallback(() => {
     resetVote();
@@ -165,6 +188,105 @@ export default function FeedScreen() {
     await acceptStreakDeath();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
   }, [acceptStreakDeath]);
+
+  // Calculate peek data from current question
+  const calculatePeekData = useCallback((): PeekData | null => {
+    if (!currentQuestion) return null;
+    
+    const total = currentQuestion.votes_a + currentQuestion.votes_b;
+    if (total === 0) {
+      return { percentage_a: 50, percentage_b: 50, leading: 'tie' };
+    }
+    
+    const percentage_a = Math.round((currentQuestion.votes_a / total) * 100);
+    const percentage_b = 100 - percentage_a;
+    
+    let leading: 'a' | 'b' | 'tie' = 'tie';
+    if (currentQuestion.votes_a > currentQuestion.votes_b) leading = 'a';
+    else if (currentQuestion.votes_b > currentQuestion.votes_a) leading = 'b';
+    
+    return { percentage_a, percentage_b, leading };
+  }, [currentQuestion]);
+
+  // Update peek data when peek is activated
+  useEffect(() => {
+    if (peekActive && currentQuestion) {
+      setPeekData(calculatePeekData());
+    } else {
+      setPeekData(null);
+    }
+  }, [peekActive, currentQuestion, calculatePeekData]);
+
+  // Handle using Peek power-up
+  const handleUsePeek = useCallback(async () => {
+    if (!uid || !user || peekActive) return;
+    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const { success, cost } = await activatePeek();
+    
+    if (success && cost > 0) {
+      // Deduct points from user if they didn't use inventory
+      try {
+        await deductUserScore(uid, cost);
+      } catch (error) {
+        console.error('Failed to deduct points for peek:', error);
+        deactivatePeek();
+        return;
+      }
+    }
+    
+    if (success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [uid, user, peekActive, activatePeek, deactivatePeek]);
+
+  // Handle using Skip power-up
+  const handleUseSkip = useCallback(async () => {
+    if (!uid || !user || !currentQuestion) return;
+    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const { success, cost } = await activateSkip();
+    
+    if (success && cost > 0) {
+      // Deduct points from user if they didn't use inventory
+      try {
+        await deductUserScore(uid, cost);
+      } catch (error) {
+        console.error('Failed to deduct points for skip:', error);
+        return;
+      }
+    }
+    
+    if (success) {
+      // Clear any active effects and move to next question
+      clearActiveEffects();
+      setPeekData(null);
+      nextQuestion();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [uid, user, currentQuestion, activateSkip, clearActiveEffects, nextQuestion]);
+
+  // Handle using Double Down power-up
+  const handleUseDoubleDown = useCallback(async () => {
+    if (!uid || !user || doubleDownActive) return;
+    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const { success, cost } = await activateDoubleDown();
+    
+    if (success && cost > 0) {
+      // Deduct points from user if they didn't use inventory
+      try {
+        await deductUserScore(uid, cost);
+      } catch (error) {
+        console.error('Failed to deduct points for double down:', error);
+        return;
+      }
+    }
+    
+    if (success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [uid, user, doubleDownActive, activateDoubleDown]);
 
   const handleRefresh = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -395,10 +517,26 @@ export default function FeedScreen() {
             key={currentQuestion.id}
             question={currentQuestion}
             voteResult={voteResult}
+            peekData={peekData}
+            doubleDownActive={doubleDownActive}
             onAnimationComplete={handleAnimationComplete}
           />
         )}
       </View>
+
+      {/* Power-Up Bar */}
+      {currentQuestion && !showingResult && (
+        <PowerUpBar
+          powerUps={powerUps}
+          userScore={user?.score ?? 0}
+          doubleDownActive={doubleDownActive}
+          peekActive={peekActive}
+          onUsePeek={handleUsePeek}
+          onUseSkip={handleUseSkip}
+          onUseDoubleDown={handleUseDoubleDown}
+          disabled={voteLoading}
+        />
+      )}
 
       {/* Vote Buttons - Fixed at bottom */}
       {currentQuestion && (

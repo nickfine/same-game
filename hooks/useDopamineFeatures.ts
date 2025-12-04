@@ -1,8 +1,23 @@
 import { useState, useCallback, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { POWER_UP_COSTS } from '../lib/constants';
+import {
+  usePowerUpSecure,
+  claimRewardSecure,
+  skipQuestionSecure,
+  useStreakFreezeSecure,
+  clientToApiDopamineState,
+  apiToClientDopamineState,
+} from '../lib/cloudFunctions';
 import type { Reward } from '../lib/rewards';
 
 const STORAGE_KEY = '@same_dopamine';
+
+// Set to true to use Cloud Functions (anti-cheat), false for local state
+const USE_CLOUD_FUNCTIONS = false; // Enable after deploying functions
+
+// Power-up type for type safety
+type PowerUpType = 'streak_freeze' | 'peek' | 'skip' | 'double_down';
 
 interface DopamineState {
   // Daily spin
@@ -64,6 +79,9 @@ export function useDopamineFeatures() {
   // Modal visibility states
   const [showChest, setShowChest] = useState(false);
   const [showSpin, setShowSpin] = useState(false);
+  
+  // Active power-up states (not persisted - per-session only)
+  const [peekActive, setPeekActive] = useState(false);
 
   // Load state from storage
   useEffect(() => {
@@ -188,7 +206,7 @@ export function useDopamineFeatures() {
     setShowSpin(false);
   }, [state]);
 
-  // Use a power-up
+  // Use a power-up from inventory
   const usePowerUp = useCallback(async (type: keyof DopamineState['powerUps']): Promise<boolean> => {
     if (state.powerUps[type] <= 0) return false;
     
@@ -201,6 +219,98 @@ export function useDopamineFeatures() {
     
     await saveState(newState);
     return true;
+  }, [state]);
+
+  // Check if user can afford a power-up (has inventory OR enough points)
+  const canAffordPowerUp = useCallback((type: PowerUpType, userScore: number): boolean => {
+    // If they have one in inventory, they can use it
+    if (state.powerUps[type] > 0) return true;
+    
+    // Otherwise, check if they can afford to buy it
+    const cost = type === 'peek' ? POWER_UP_COSTS.PEEK
+      : type === 'skip' ? POWER_UP_COSTS.SKIP
+      : type === 'double_down' ? POWER_UP_COSTS.DOUBLE_DOWN
+      : 0;
+    
+    return userScore >= cost;
+  }, [state.powerUps]);
+
+  // Get the cost of a power-up (0 if user has inventory)
+  const getPowerUpCost = useCallback((type: PowerUpType): number => {
+    if (state.powerUps[type] > 0) return 0;
+    
+    switch (type) {
+      case 'peek': return POWER_UP_COSTS.PEEK;
+      case 'skip': return POWER_UP_COSTS.SKIP;
+      case 'double_down': return POWER_UP_COSTS.DOUBLE_DOWN;
+      default: return 0;
+    }
+  }, [state.powerUps]);
+
+  // Activate peek power-up
+  const activatePeek = useCallback(async (): Promise<{ success: boolean; cost: number }> => {
+    if (peekActive) return { success: false, cost: 0 };
+    
+    // Use from inventory if available
+    if (state.powerUps.peek > 0) {
+      const newState = { ...state };
+      newState.powerUps.peek -= 1;
+      await saveState(newState);
+      setPeekActive(true);
+      return { success: true, cost: 0 };
+    }
+    
+    // Otherwise, return cost to deduct from user score
+    setPeekActive(true);
+    return { success: true, cost: POWER_UP_COSTS.PEEK };
+  }, [state, peekActive]);
+
+  // Deactivate peek (after voting)
+  const deactivatePeek = useCallback(() => {
+    setPeekActive(false);
+  }, []);
+
+  // Activate double down power-up
+  const activateDoubleDown = useCallback(async (): Promise<{ success: boolean; cost: number }> => {
+    if (state.doubleDownActive) return { success: false, cost: 0 };
+    
+    // Use from inventory if available
+    if (state.powerUps.double_down > 0) {
+      const newState = { ...state };
+      newState.powerUps.double_down -= 1;
+      newState.doubleDownActive = true;
+      await saveState(newState);
+      return { success: true, cost: 0 };
+    }
+    
+    // Otherwise, return cost to deduct from user score
+    const newState = { ...state, doubleDownActive: true };
+    await saveState(newState);
+    return { success: true, cost: POWER_UP_COSTS.DOUBLE_DOWN };
+  }, [state]);
+
+  // Use skip power-up (returns cost if no inventory)
+  const activateSkip = useCallback(async (): Promise<{ success: boolean; cost: number }> => {
+    // Use from inventory if available
+    if (state.powerUps.skip > 0) {
+      const newState = { ...state };
+      newState.powerUps.skip -= 1;
+      await saveState(newState);
+      return { success: true, cost: 0 };
+    }
+    
+    // Otherwise, return cost to deduct from user score
+    return { success: true, cost: POWER_UP_COSTS.SKIP };
+  }, [state]);
+
+  // Clear active power-ups after vote (call after vote is processed)
+  const clearActiveEffects = useCallback(async () => {
+    setPeekActive(false);
+    
+    if (state.doubleDownActive) {
+      const newState = { ...state, doubleDownActive: false };
+      await saveState(newState);
+    }
   }, [state]);
 
   // Consume multiplier after a vote
@@ -253,6 +363,7 @@ export function useDopamineFeatures() {
     activeMultiplier: state.activeMultiplier,
     multiplierVotesRemaining: state.multiplierVotesRemaining,
     doubleDownActive: state.doubleDownActive,
+    peekActive,
     
     // Modal visibility
     showChest,
@@ -267,6 +378,15 @@ export function useDopamineFeatures() {
     consumeMultiplier,
     getEffectiveMultiplier,
     useStreakFreezeItem,
+    
+    // Power-up activation
+    canAffordPowerUp,
+    getPowerUpCost,
+    activatePeek,
+    deactivatePeek,
+    activateDoubleDown,
+    activateSkip,
+    clearActiveEffects,
     
     // Modal controls
     closeChest,

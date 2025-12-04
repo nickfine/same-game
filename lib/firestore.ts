@@ -525,3 +525,28 @@ export function getUserRemainingVotes(user: User): number {
 export function canUserVote(user: User): boolean {
   return getUserRemainingVotes(user) > 0;
 }
+
+// Deduct points from user score (for power-up purchases)
+export async function deductUserScore(uid: string, amount: number): Promise<void> {
+  const userRef = getUserRef(uid);
+  
+  await runTransaction(db, async (transaction) => {
+    const userDoc = await transaction.get(userRef);
+    
+    if (!userDoc.exists()) {
+      throw new Error('User not found');
+    }
+    
+    const userData = userDoc.data();
+    const currentScore = userData.score ?? 0;
+    
+    if (currentScore < amount) {
+      throw new Error('Insufficient points');
+    }
+    
+    transaction.update(userRef, {
+      score: increment(-amount),
+      last_active: serverTimestamp(),
+    });
+  });
+}

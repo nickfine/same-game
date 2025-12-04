@@ -1,6 +1,6 @@
 {
   "name": "same",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
@@ -37,6 +37,9 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "dotenv": "^17.2.3",
+    "firebase-admin": "^13.6.0",
+    "ts-node": "^10.9.2",
     "tsx": "^4.19.2",
     "typescript": "~5.9.2"
   },

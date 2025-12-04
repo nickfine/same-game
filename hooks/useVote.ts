@@ -1,12 +1,21 @@
 import { useState, useCallback } from 'react';
 import { voteOnQuestion } from '../lib/firestore';
+import { castVoteSecure } from '../lib/cloudFunctions';
 import type { VoteChoice, VoteResult } from '../types';
 import * as Haptics from 'expo-haptics';
+
+// Set to true to use Cloud Functions (anti-cheat), false for direct Firestore
+const USE_CLOUD_FUNCTIONS = false; // Enable after deploying functions
 
 interface VoteState {
   loading: boolean;
   error: string | null;
   result: VoteResult | null;
+}
+
+interface VoteOptions {
+  doubleDownActive?: boolean;
+  activeMultiplier?: number;
 }
 
 export function useVote() {
@@ -19,12 +28,39 @@ export function useVote() {
   const vote = useCallback(async (
     uid: string,
     questionId: string,
-    choice: VoteChoice
+    choice: VoteChoice,
+    options?: VoteOptions
   ): Promise<VoteResult | null> => {
     setState({ loading: true, error: null, result: null });
     
     try {
-      const result = await voteOnQuestion(uid, questionId, choice);
+      let result: VoteResult;
+      
+      if (USE_CLOUD_FUNCTIONS) {
+        // Use secure Cloud Function (anti-cheat)
+        const response = await castVoteSecure(questionId, choice, {
+          doubleDownActive: options?.doubleDownActive,
+          activeMultiplier: options?.activeMultiplier,
+        });
+        
+        if (!response.success) {
+          throw new Error(response.error || 'Vote failed');
+        }
+        
+        result = {
+          won: response.won,
+          choice,
+          votes_a: response.votes_a,
+          votes_b: response.votes_b,
+          percentage_a: response.percentage_a,
+          percentage_b: response.percentage_b,
+          previousStreak: response.previousStreak,
+          newStreak: response.newStreak,
+        };
+      } else {
+        // Use direct Firestore (development mode)
+        result = await voteOnQuestion(uid, questionId, choice);
+      }
       
       // Haptic feedback based on result
       if (result.won) {

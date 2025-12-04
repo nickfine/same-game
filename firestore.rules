@@ -1,38 +1,95 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow authenticated users to read all user documents (for leaderboard)
-    // But only write to their own document
+    
+    // =======================================================================
+    // USERS COLLECTION
+    // Users can read any user (for leaderboard)
+    // Users can only update specific non-economy fields on their own document
+    // Economy fields (score, streaks, power-ups) should only be modified by Cloud Functions
+    // =======================================================================
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
       
-      // Allow reading/writing achievements subcollection
+      // Allow creation of new user document
+      allow create: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow updates - but in production, economy operations should go through Cloud Functions
+      // This rule allows the current direct write mode to work during development
+      allow update: if request.auth != null && request.auth.uid == userId;
+      
+      // User's achievements subcollection
       match /achievements/{achievementId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
       
-      // Allow reading/writing playtime subcollection (for compliance tracking)
+      // Playtime tracking subcollection (for compliance)
       match /playtime/{weekId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
     
-    // Allow authenticated users to read all questions and update vote counts
+    // =======================================================================
+    // QUESTIONS COLLECTION
+    // Anyone authenticated can read questions
+    // Anyone authenticated can create questions (costs points - validated in code)
+    // Vote counts can be updated (transaction handles atomicity)
+    // =======================================================================
     match /questions/{questionId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null;
-      // Allow updates - the transaction handles validation
       allow update: if request.auth != null;
+      allow delete: if false; // Questions cannot be deleted
     }
     
-    // Allow authenticated users to read votes and create their own
-    // Votes cannot be updated or deleted
+    // =======================================================================
+    // VOTES COLLECTION
+    // Votes are immutable once created
+    // Used to prevent duplicate voting
+    // =======================================================================
     match /votes/{voteId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && 
                       request.resource.data.uid == request.auth.uid;
       allow update, delete: if false;
+    }
+    
+    // =======================================================================
+    // SKIPS COLLECTION
+    // Records skipped questions (from Skip power-up)
+    // Prevents re-voting on skipped questions
+    // =======================================================================
+    match /skips/{skipId} {
+      allow read: if request.auth != null;
+      // Only Cloud Functions should create skips in production
+      // Allow client creation during development
+      allow create: if request.auth != null && 
+                      request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+    
+    // =======================================================================
+    // REWARD LOGS (Analytics)
+    // Created by Cloud Functions only
+    // Users can read their own logs
+    // =======================================================================
+    match /reward_logs/{logId} {
+      allow read: if request.auth != null && 
+                    resource.data.uid == request.auth.uid;
+      // Only Cloud Functions (Admin SDK) can write
+      allow write: if false;
+    }
+    
+    // =======================================================================
+    // STREAK FREEZE LOGS (Analytics)
+    // Created by Cloud Functions only
+    // Users can read their own logs
+    // =======================================================================
+    match /streak_freeze_logs/{logId} {
+      allow read: if request.auth != null && 
+                    resource.data.uid == request.auth.uid;
+      // Only Cloud Functions (Admin SDK) can write
+      allow write: if false;
     }
     
   }
