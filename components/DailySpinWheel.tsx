@@ -7,6 +7,7 @@ import Animated, {
   withTiming,
   withSpring,
   withSequence,
+  withRepeat,
   Easing,
   runOnJS,
   interpolate,
@@ -241,11 +242,6 @@ export function DailySpinWheel({ visible, onClose, onRewardClaimed }: DailySpinW
   const glowStyle = useAnimatedStyle(() => ({
     opacity: glowOpacity.value,
   }));
-
-  const withRepeat = (animation: any, count: number, reverse: boolean) => {
-    'worklet';
-    return animation;
-  };
 
   return (
     <Modal

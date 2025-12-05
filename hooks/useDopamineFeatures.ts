@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { POWER_UP_COSTS } from '../lib/constants';
+import { getTodayDate } from '../lib/dateUtils';
 import {
   usePowerUpSecure,
   claimRewardSecure,
@@ -13,8 +14,20 @@ import type { Reward } from '../lib/rewards';
 
 const STORAGE_KEY = '@same_dopamine';
 
-// Set to true to use Cloud Functions (anti-cheat), false for local state
-const USE_CLOUD_FUNCTIONS = false; // Enable after deploying functions
+/**
+ * PRODUCTION TOGGLE: Cloud Functions vs Local State
+ * 
+ * When false (development): All dopamine state is stored locally in AsyncStorage.
+ *   - Faster for development/testing
+ *   - NOT secure - users can cheat by modifying local storage
+ * 
+ * When true (production): Economy operations use Cloud Functions for server-side validation.
+ *   - Anti-cheat protection
+ *   - Requires deploying Cloud Functions first: `cd functions && npm run deploy`
+ * 
+ * TODO: Set to true before production deployment!
+ */
+const USE_CLOUD_FUNCTIONS = false;
 
 // Power-up type for type safety
 type PowerUpType = 'streak_freeze' | 'peek' | 'skip' | 'double_down';
@@ -66,10 +79,6 @@ function getRandomChestInterval(): number {
   return Math.floor(
     Math.random() * (MAX_VOTES_BETWEEN_CHESTS - MIN_VOTES_BETWEEN_CHESTS + 1) + MIN_VOTES_BETWEEN_CHESTS
   );
-}
-
-function getTodayDate(): string {
-  return new Date().toISOString().split('T')[0];
 }
 
 export function useDopamineFeatures() {

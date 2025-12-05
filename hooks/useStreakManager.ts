@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { getTodayDate, daysBetween } from '../lib/dateUtils';
 import type { User } from '../types';
 
 const CRACKED_BADGE_DAYS = 7;
@@ -9,17 +10,6 @@ interface StreakManagerState {
   showDeathModal: boolean;
   deadStreak: number;
   streakSaved: boolean;
-}
-
-function getTodayDate(): string {
-  return new Date().toISOString().split('T')[0];
-}
-
-function daysBetween(date1: string, date2: string): number {
-  const d1 = new Date(date1);
-  const d2 = new Date(date2);
-  const diffTime = Math.abs(d2.getTime() - d1.getTime());
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
 export function useStreakManager(user: User | null, hasStreakFreeze: boolean) {

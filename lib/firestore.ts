@@ -19,6 +19,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { STARTING_SCORE, QUESTION_CREATION_COST, DAILY_QUESTION_LIMIT, COMPLIANCE } from './constants';
+import { getTodayDate } from './dateUtils';
 import type { User, Question, Vote, VoteChoice, CreateQuestionInput, VoteResult, VoteHistoryItem, UserStats, LeaderboardEntry } from '../types';
 
 // Collection references
@@ -193,11 +194,6 @@ export async function getQuestions(
   }
   
   return { questions, lastDoc: newLastDoc };
-}
-
-// Get today's date as ISO string
-function getTodayDate(): string {
-  return new Date().toISOString().split('T')[0];
 }
 
 // Vote on a question with transaction (prevents cheating)
@@ -549,4 +545,14 @@ export async function deductUserScore(uid: string, amount: number): Promise<void
       last_active: serverTimestamp(),
     });
   });
+}
+
+// Add points to user score (for rewards from chests/spin)
+export async function addUserScore(uid: string, amount: number): Promise<void> {
+  const userRef = getUserRef(uid);
+  
+  await setDoc(userRef, {
+    score: increment(amount),
+    last_active: serverTimestamp(),
+  }, { merge: true });
 }

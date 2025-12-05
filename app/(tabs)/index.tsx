@@ -22,7 +22,7 @@ import { DailySpinWheel } from '../../components/DailySpinWheel';
 import { ComboMultiplier } from '../../components/ComboMultiplier';
 import { StreakDeathModal } from '../../components/StreakDeathModal';
 import { PowerUpBar } from '../../components/PowerUpBar';
-import { deductUserScore } from '../../lib/firestore';
+import { deductUserScore, addUserScore } from '../../lib/firestore';
 import type { VoteChoice } from '../../types';
 import type { Reward } from '../../lib/rewards';
 
@@ -92,7 +92,6 @@ export default function FeedScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
   const [comboActive, setComboActive] = useState(false);
-  const [pendingChestReward, setPendingChestReward] = useState<Reward | null>(null);
 
   // Handle achievement toast dismissal
   const handleAchievementDismiss = useCallback(() => {
@@ -154,19 +153,35 @@ export default function FeedScreen() {
   }, [resetVote, nextQuestion, showChest]);
 
   // Handle chest reward claimed
-  const handleChestReward = useCallback((reward: Reward) => {
-    if (user) {
+  const handleChestReward = useCallback(async (reward: Reward) => {
+    if (user && uid) {
       onChestClaimed(reward, user.votes_cast);
-      // TODO: Apply points reward to user score if reward.type === 'points'
+      
+      // Apply points reward to user score
+      if (reward.type === 'points' && reward.value > 0) {
+        try {
+          await addUserScore(uid, reward.value);
+        } catch (error) {
+          console.error('Failed to add points from chest:', error);
+        }
+      }
     }
     nextQuestion();
-  }, [user, onChestClaimed, nextQuestion]);
+  }, [user, uid, onChestClaimed, nextQuestion]);
 
   // Handle spin reward claimed  
-  const handleSpinReward = useCallback((reward: Reward) => {
+  const handleSpinReward = useCallback(async (reward: Reward) => {
     onSpinClaimed(reward);
-    // TODO: Apply points reward to user score if reward.type === 'points'
-  }, [onSpinClaimed]);
+    
+    // Apply points reward to user score
+    if (uid && reward.type === 'points' && reward.value > 0) {
+      try {
+        await addUserScore(uid, reward.value);
+      } catch (error) {
+        console.error('Failed to add points from spin:', error);
+      }
+    }
+  }, [uid, onSpinClaimed]);
 
   // Handle combo expired
   const handleComboExpired = useCallback(() => {

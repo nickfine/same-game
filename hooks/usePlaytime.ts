@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { COMPLIANCE } from '../lib/constants';
-import { getWeekStart } from './useCompliance';
+import { getWeekStart } from '../lib/dateUtils';
 import type { PlaytimeRecord, PlaytimeSession } from '../types';
 
 // Get playtime record reference (subcollection under users for cleaner security rules)
@@ -26,6 +26,19 @@ export function usePlaytime(uid: string | null, isMinor: boolean) {
   const sessionStartRef = useRef<Date | null>(null);
   const updateIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const appStateRef = useRef<AppStateStatus>('active');
+  
+  // Use refs to avoid stale closures in interval callbacks
+  const weeklyMinutesRef = useRef(weeklyMinutes);
+  const warningShownRef = useRef(warningShown);
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    weeklyMinutesRef.current = weeklyMinutes;
+  }, [weeklyMinutes]);
+  
+  useEffect(() => {
+    warningShownRef.current = warningShown;
+  }, [warningShown]);
 
   // Only track playtime for minors
   const shouldTrack = isMinor && uid;
@@ -132,14 +145,15 @@ export function usePlaytime(uid: string | null, isMinor: boolean) {
   const updatePlaytime = useCallback(async (additionalMinutes: number) => {
     if (!uid) return;
     
-    const newTotal = weeklyMinutes + additionalMinutes;
+    // Use refs to get current values (avoiding stale closure from setInterval)
+    const newTotal = weeklyMinutesRef.current + additionalMinutes;
     setWeeklyMinutes(newTotal);
     
     // Check limits
     if (newTotal >= COMPLIANCE.WEEKLY_PLAYTIME_CAP_MINOR) {
       setLimitReached(true);
     } else if (
-      !warningShown && 
+      !warningShownRef.current && 
       newTotal >= COMPLIANCE.WEEKLY_PLAYTIME_CAP_MINOR * COMPLIANCE.PLAYTIME_WARNING_THRESHOLD
     ) {
       setWarningShown(true);
@@ -149,7 +163,7 @@ export function usePlaytime(uid: string | null, isMinor: boolean) {
     if (newTotal % 5 === 0) {
       await saveSessionToFirestore(5);
     }
-  }, [uid, weeklyMinutes, warningShown]);
+  }, [uid]); // Removed weeklyMinutes and warningShown from deps - using refs instead
 
   const saveSessionToFirestore = async (minutesToAdd: number) => {
     if (!uid) return;

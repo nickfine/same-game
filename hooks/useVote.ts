@@ -4,8 +4,21 @@ import { castVoteSecure } from '../lib/cloudFunctions';
 import type { VoteChoice, VoteResult } from '../types';
 import * as Haptics from 'expo-haptics';
 
-// Set to true to use Cloud Functions (anti-cheat), false for direct Firestore
-const USE_CLOUD_FUNCTIONS = false; // Enable after deploying functions
+/**
+ * PRODUCTION TOGGLE: Cloud Functions vs Direct Firestore
+ * 
+ * When false (development): Votes are cast directly to Firestore.
+ *   - Faster for development/testing
+ *   - NOT secure - vote counts and scores can be manipulated client-side
+ * 
+ * When true (production): Votes use Cloud Functions for server-side validation.
+ *   - Anti-cheat protection - server validates all vote logic
+ *   - Multipliers and power-ups are verified server-side
+ *   - Requires deploying Cloud Functions first: `cd functions && npm run deploy`
+ * 
+ * TODO: Set to true before production deployment!
+ */
+const USE_CLOUD_FUNCTIONS = false;
 
 interface VoteState {
   loading: boolean;

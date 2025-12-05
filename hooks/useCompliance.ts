@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COMPLIANCE } from '../lib/constants';
+import { getTodayDate, getWeekStart } from '../lib/dateUtils';
 import type { ComplianceState } from '../types';
 
 const STORAGE_KEY = '@same_compliance';
@@ -47,20 +48,8 @@ export function meetsMinimumAge(birthDate: string): boolean {
   return calculateAge(birthDate) >= COMPLIANCE.MIN_AGE;
 }
 
-// Get start of current week (Monday)
-export function getWeekStart(): string {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Sunday
-  const monday = new Date(now.setDate(diff));
-  monday.setHours(0, 0, 0, 0);
-  return monday.toISOString().split('T')[0];
-}
-
-// Get today's date as ISO string
-export function getTodayDate(): string {
-  return new Date().toISOString().split('T')[0];
-}
+// Re-export date utilities for backwards compatibility
+export { getTodayDate, getWeekStart } from '../lib/dateUtils';
 
 export function useCompliance() {
   const [state, setState] = useState<ComplianceState>(DEFAULT_STATE);

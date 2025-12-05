@@ -368,7 +368,11 @@ export const usePowerUp = functions.https.onCall(
             [inventoryKey]: dopamineState.powerUps[inventoryKey] - 1,
           };
         } else {
-          // Calculate cost
+          // Calculate cost for purchasable power-ups
+          // NOTE: streak_freeze is NOT purchasable with points - it can only be
+          // obtained from Mystery Chests or Daily Spin rewards. If a user tries
+          // to use streak_freeze without inventory, they should use the dedicated
+          // useStreakFreeze function instead.
           switch (powerUpType) {
             case "peek":
               cost = POWER_UP_COSTS.PEEK;
@@ -379,6 +383,12 @@ export const usePowerUp = functions.https.onCall(
             case "double_down":
               cost = POWER_UP_COSTS.DOUBLE_DOWN;
               break;
+            case "streak_freeze":
+              // Streak freeze cannot be purchased - only obtained from rewards
+              throw new functions.https.HttpsError(
+                "failed-precondition",
+                "Streak freeze must be earned from rewards, not purchased"
+              );
             default:
               throw new functions.https.HttpsError(
                 "invalid-argument",
