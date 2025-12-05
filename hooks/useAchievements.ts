@@ -101,12 +101,14 @@ export function useAchievements(uid: string | null, user: User | null) {
     fetchAchievements();
   }, [fetchAchievements]);
 
-  // Check for new achievements when user changes
+  // Check for new achievements when user stats change
+  // Only run AFTER initial fetch completes to avoid showing already-unlocked achievements
   useEffect(() => {
-    if (!state.loading && user) {
+    if (!state.loading && user && state.unlocked.size >= 0) {
       checkAndUnlock();
     }
-  }, [user?.votes_cast, user?.votes_won, user?.questions_created, user?.best_streak, user?.score]);
+    // Include checkAndUnlock in deps to avoid stale closure with empty unlocked set
+  }, [state.loading, checkAndUnlock]);
 
   // Get all achievements with unlock status
   const allAchievements = ACHIEVEMENTS.map(achievement => ({
