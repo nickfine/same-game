@@ -359,16 +359,19 @@ export function StreakMeterCompact({
         showCracked && compactStyles.badgeCracked,
         currentStreak >= 3 && { borderColor: currentThreshold.color },
       ]}>
-        <Animated.Text style={[compactStyles.flame, flameStyle]}>
-          {showCracked ? '💔' : '🔥'}
-        </Animated.Text>
-        <Animated.Text style={[
-          compactStyles.number,
-          numberStyle,
-          { color: showCracked ? '#DC2626' : (currentThreshold.color || '#F59E0B') },
-        ]}>
-          {currentStreak}
-        </Animated.Text>
+        <Animated.View style={flameStyle}>
+          <Text style={compactStyles.flame}>
+            {showCracked ? '💔' : '🔥'}
+          </Text>
+        </Animated.View>
+        <Animated.View style={numberStyle}>
+          <Text style={[
+            compactStyles.number,
+            { color: showCracked ? '#DC2626' : (currentThreshold.color || '#F59E0B') },
+          ]}>
+            {currentStreak}
+          </Text>
+        </Animated.View>
         
         {/* Ghost of dead streak */}
         {showCracked && lastDeadStreak && (
@@ -502,7 +505,6 @@ const compactStyles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 16,
-    gap: 4,
     borderWidth: 2,
     borderColor: 'transparent',
     shadowColor: '#000',
@@ -518,6 +520,7 @@ const compactStyles = StyleSheet.create({
   },
   flame: {
     fontSize: 16,
+    marginRight: 4,
   },
   number: {
     fontSize: 16,
