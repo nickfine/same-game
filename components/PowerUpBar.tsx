@@ -53,7 +53,9 @@ function PowerUpButton({
 }: PowerUpButtonProps) {
   const scale = useSharedValue(1);
   const canAfford = userScore >= cost;
-  const isDisabled = disabled || count <= 0 || !canAfford;
+  // Enable if user has inventory OR can afford to buy
+  const hasAccess = count > 0 || canAfford;
+  const isDisabled = disabled || !hasAccess;
 
   const handlePress = () => {
     if (isDisabled) {

@@ -242,10 +242,15 @@ export default function FeedScreen() {
 
   // Handle using Skip power-up
   const handleUseSkip = useCallback(async () => {
-    if (!uid || !user || !currentQuestion) return;
+    console.log('[Skip] handleUseSkip called', { uid, user: !!user, currentQuestion: !!currentQuestion });
+    if (!uid || !user || !currentQuestion) {
+      console.log('[Skip] Early return - missing uid/user/question');
+      return;
+    }
     
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const { success, cost } = await activateSkip();
+    console.log('[Skip] activateSkip result:', { success, cost });
     
     if (success && cost > 0) {
       // Deduct points from user if they didn't use inventory
