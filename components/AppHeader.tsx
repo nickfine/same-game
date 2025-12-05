@@ -8,25 +8,17 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { StreakMeterCompact } from './StreakMeter';
+import { LevelBadge } from './LevelBadge';
 
 interface AppHeaderProps {
   score: number;
-  currentStreak?: number;
-  lastDeadStreak?: number | null;
-  daysSinceDeath?: number;
+  level?: number;
+  xp?: number;
   onMenuPress: () => void;
-  onStreakPress?: () => void;
+  onLevelPress?: () => void;
 }
 
-export function AppHeader({ 
-  score, 
-  currentStreak = 0,
-  lastDeadStreak,
-  daysSinceDeath,
-  onMenuPress,
-  onStreakPress,
-}: AppHeaderProps) {
+export function AppHeader({ score, level = 1, xp = 0, onMenuPress, onLevelPress }: AppHeaderProps) {
   const scale = useSharedValue(1);
   const previousScore = useSharedValue(score);
 
@@ -50,58 +42,48 @@ export function AppHeader({
   };
 
   return (
-    <View style={{ paddingTop: 4 }}>
-      {/* Top row: Menu, Logo, Score */}
-      <View 
+    <View 
+      style={{ 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+      }}
+    >
+      {/* Level Badge - Prominent left position */}
+      <LevelBadge 
+        level={level} 
+        xp={xp} 
+        size="medium" 
+        showProgress={true}
+        onPress={onLevelPress}
+      />
+
+      {/* Logo - Center */}
+      <Text 
         style={{ 
-          flexDirection: 'row', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          paddingHorizontal: 20,
-          paddingVertical: 12,
+          fontFamily: 'Righteous_400Regular',
+          fontSize: 28,
+          color: '#18181b',
+          letterSpacing: 3,
         }}
       >
-        {/* Menu Button */}
-        <Pressable 
-          onPress={handleMenuPress}
-          style={{
-            width: 44,
-            height: 44,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <View style={{ gap: 5 }}>
-            <View style={{ width: 22, height: 2.5, backgroundColor: '#18181b', borderRadius: 2 }} />
-            <View style={{ width: 22, height: 2.5, backgroundColor: '#18181b', borderRadius: 2 }} />
-            <View style={{ width: 22, height: 2.5, backgroundColor: '#18181b', borderRadius: 2 }} />
-          </View>
-        </Pressable>
+        SAME
+      </Text>
 
-        {/* Logo + Streak */}
-        <View style={{ alignItems: 'center', gap: 6 }}>
-          <Text 
-            style={{ 
-              fontFamily: 'Righteous_400Regular',
-              fontSize: 32,
-              color: '#18181b',
-              letterSpacing: 4,
-            }}
-          >
-            SAME
-          </Text>
-        </View>
-
+      {/* Right side: Score + Menu */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         {/* Score Badge */}
         <Animated.View 
           style={[
             animatedScoreStyle,
             {
               backgroundColor: '#18181b',
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 20,
-              minWidth: 44,
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              borderRadius: 16,
+              minWidth: 40,
               alignItems: 'center',
             }
           ]}
@@ -109,27 +91,32 @@ export function AppHeader({
           <Text 
             style={{ 
               fontFamily: 'Righteous_400Regular',
-              fontSize: 16,
+              fontSize: 14,
               color: '#ffffff',
             }}
           >
             {score}
           </Text>
         </Animated.View>
-      </View>
 
-      {/* Streak meter row */}
-      <View style={{ 
-        alignItems: 'center', 
-        paddingBottom: 8,
-      }}>
-        <StreakMeterCompact
-          currentStreak={currentStreak}
-          lastDeadStreak={lastDeadStreak}
-          daysSinceDeath={daysSinceDeath}
-          onPress={onStreakPress}
-        />
+        {/* Menu Button */}
+        <Pressable 
+          onPress={handleMenuPress}
+          style={{
+            width: 36,
+            height: 36,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <View style={{ gap: 4 }}>
+            <View style={{ width: 18, height: 2, backgroundColor: '#18181b', borderRadius: 1 }} />
+            <View style={{ width: 18, height: 2, backgroundColor: '#18181b', borderRadius: 1 }} />
+            <View style={{ width: 18, height: 2, backgroundColor: '#18181b', borderRadius: 1 }} />
+          </View>
+        </Pressable>
       </View>
     </View>
   );
 }
+

@@ -7,6 +7,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { useAuth } from '../hooks/useAuth';
 import { useLeaderboard } from '../hooks/useLeaderboard';
+import { LevelBadgeInline } from '../components/LevelBadge';
 import type { LeaderboardEntry } from '../types';
 
 // Medal colors
@@ -221,7 +222,7 @@ function LeaderboardRow({
           backgroundColor: isCurrentUser ? 'rgba(255,255,255,0.2)' : '#f4f4f5',
           justifyContent: 'center',
           alignItems: 'center',
-          marginRight: 12,
+          marginRight: 10,
         }}
       >
         <Text
@@ -233,6 +234,11 @@ function LeaderboardRow({
         >
           {entry.rank}
         </Text>
+      </View>
+
+      {/* Level Badge */}
+      <View style={{ marginRight: 10 }}>
+        <LevelBadgeInline level={entry.level} size="small" />
       </View>
 
       {/* Name & Stats */}

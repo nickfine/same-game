@@ -7,9 +7,11 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useAuth } from '../hooks/useAuth';
 import { useAchievements } from '../hooks/useAchievements';
-import { useStreakManager } from '../hooks/useStreakManager';
 import { getUserStats, updateDisplayName } from '../lib/firestore';
-import { StreakMeter } from '../components/StreakMeter';
+import { LevelBadgeHero } from '../components/LevelBadge';
+import { calculateLevel, getNextMilestoneLevel } from '../lib/levels';
+import { MILESTONE_REWARDS } from '../lib/constants';
+import { REWARDS } from '../lib/rewards';
 import type { Achievement } from '../types';
 
 interface StatCardProps {
@@ -123,7 +125,6 @@ function AchievementBadge({
 export default function ProfileScreen() {
   const { user, uid } = useAuth();
   const { achievements, unlockedCount, totalCount } = useAchievements(uid, user);
-  const { daysSinceDeath, lastDeadStreak } = useStreakManager(user, false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -302,20 +303,67 @@ export default function ProfileScreen() {
           )}
         </Animated.View>
 
-        {/* Streak Meter */}
+        {/* Level Hero Section */}
         <Animated.View
           entering={FadeInDown.delay(25).springify()}
           style={{
-            alignItems: 'center',
+            backgroundColor: '#18181b',
+            borderRadius: 24,
+            padding: 24,
             marginBottom: 16,
+            alignItems: 'center',
           }}
         >
-          <StreakMeter
-            currentStreak={stats?.current_streak ?? 0}
-            bestStreak={stats?.best_streak ?? 0}
-            lastDeadStreak={lastDeadStreak}
-            daysSinceDeath={daysSinceDeath}
+          <LevelBadgeHero 
+            level={user?.level ?? calculateLevel(user?.xp ?? 0)} 
+            xp={user?.xp ?? 0} 
           />
+          
+          {/* Next Milestone Teaser */}
+          {(() => {
+            const currentLevel = user?.level ?? calculateLevel(user?.xp ?? 0);
+            const nextMilestone = getNextMilestoneLevel(currentLevel);
+            const nextReward = MILESTONE_REWARDS[nextMilestone];
+            
+            if (nextReward && REWARDS[nextReward]) {
+              return (
+                <View 
+                  style={{ 
+                    marginTop: 20, 
+                    flexDirection: 'row', 
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.1)',
+                  }}
+                >
+                  <Text style={{ fontSize: 24, marginRight: 12 }}>
+                    {REWARDS[nextReward].icon}
+                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ 
+                      fontFamily: 'Poppins_400Regular', 
+                      fontSize: 12, 
+                      color: 'rgba(255,255,255,0.6)' 
+                    }}>
+                      Reach Level {nextMilestone} to unlock
+                    </Text>
+                    <Text style={{ 
+                      fontFamily: 'Poppins_700Bold', 
+                      fontSize: 14, 
+                      color: '#ffffff' 
+                    }}>
+                      {REWARDS[nextReward].displayName}
+                    </Text>
+                  </View>
+                </View>
+              );
+            }
+            return null;
+          })()}
         </Animated.View>
 
         {/* Score Hero */}

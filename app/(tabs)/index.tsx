@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -22,16 +22,11 @@ import { DailySpinWheel } from '../../components/DailySpinWheel';
 import { ComboMultiplier } from '../../components/ComboMultiplier';
 import { StreakDeathModal } from '../../components/StreakDeathModal';
 import { PowerUpBar } from '../../components/PowerUpBar';
+import { LevelUpModal } from '../../components/LevelUpModal';
+import { calculateLevel } from '../../lib/levels';
 import { deductUserScore, addUserScore } from '../../lib/firestore';
 import type { VoteChoice } from '../../types';
 import type { Reward } from '../../lib/rewards';
-
-// Peek data interface
-interface PeekData {
-  percentage_a: number;
-  percentage_b: number;
-  leading: 'a' | 'b' | 'tie';
-}
 
 export default function FeedScreen() {
   const { user, uid } = useAuth();
@@ -71,9 +66,6 @@ export default function FeedScreen() {
     clearActiveEffects,
   } = useDopamineFeatures();
 
-  // Peek data state
-  const [peekData, setPeekData] = useState<PeekData | null>(null);
-
   // Streak death management (loss aversion)
   const hasStreakFreeze = powerUps.streakFreeze > 0;
   const {
@@ -92,6 +84,56 @@ export default function FeedScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
   const [comboActive, setComboActive] = useState(false);
+  const [pendingChestReward, setPendingChestReward] = useState<Reward | null>(null);
+
+  // Peek data for showing vote percentages
+  interface PeekData {
+    percentage_a: number;
+    percentage_b: number;
+    leading: 'a' | 'b' | 'tie';
+  }
+  const [peekData, setPeekData] = useState<PeekData | null>(null);
+  
+  // Calculate peek data when peek is activated
+  useEffect(() => {
+    if (peekActive && currentQuestion) {
+      const total = currentQuestion.votes_a + currentQuestion.votes_b;
+      let data: PeekData;
+      if (total === 0) {
+        data = { percentage_a: 50, percentage_b: 50, leading: 'tie' };
+      } else {
+        const percentage_a = Math.round((currentQuestion.votes_a / total) * 100);
+        const percentage_b = 100 - percentage_a;
+        let leading: 'a' | 'b' | 'tie' = 'tie';
+        if (currentQuestion.votes_a > currentQuestion.votes_b) leading = 'a';
+        else if (currentQuestion.votes_b > currentQuestion.votes_a) leading = 'b';
+        data = { percentage_a, percentage_b, leading };
+      }
+      setPeekData(data);
+    } else {
+      setPeekData(null);
+    }
+  }, [peekActive, currentQuestion]);
+  
+  // Level up tracking
+  const [showLevelUpModal, setShowLevelUpModal] = useState(false);
+  const [newLevelToShow, setNewLevelToShow] = useState(1);
+  const previousLevelRef = useRef<number | null>(null);
+  
+  // Track level changes and show level-up modal
+  useEffect(() => {
+    if (user) {
+      const currentLevel = user.level ?? calculateLevel(user.xp ?? 0);
+      
+      if (previousLevelRef.current !== null && currentLevel > previousLevelRef.current) {
+        // Level up detected!
+        setNewLevelToShow(currentLevel);
+        setShowLevelUpModal(true);
+      }
+      
+      previousLevelRef.current = currentLevel;
+    }
+  }, [user?.level, user?.xp]);
 
   // Handle achievement toast dismissal
   const handleAchievementDismiss = useCallback(() => {
@@ -153,35 +195,19 @@ export default function FeedScreen() {
   }, [resetVote, nextQuestion, showChest]);
 
   // Handle chest reward claimed
-  const handleChestReward = useCallback(async (reward: Reward) => {
-    if (user && uid) {
+  const handleChestReward = useCallback((reward: Reward) => {
+    if (user) {
       onChestClaimed(reward, user.votes_cast);
-      
-      // Apply points reward to user score
-      if (reward.type === 'points' && reward.value > 0) {
-        try {
-          await addUserScore(uid, reward.value);
-        } catch (error) {
-          console.error('Failed to add points from chest:', error);
-        }
-      }
+      // TODO: Apply points reward to user score if reward.type === 'points'
     }
     nextQuestion();
-  }, [user, uid, onChestClaimed, nextQuestion]);
+  }, [user, onChestClaimed, nextQuestion]);
 
   // Handle spin reward claimed  
-  const handleSpinReward = useCallback(async (reward: Reward) => {
+  const handleSpinReward = useCallback((reward: Reward) => {
     onSpinClaimed(reward);
-    
-    // Apply points reward to user score
-    if (uid && reward.type === 'points' && reward.value > 0) {
-      try {
-        await addUserScore(uid, reward.value);
-      } catch (error) {
-        console.error('Failed to add points from spin:', error);
-      }
-    }
-  }, [uid, onSpinClaimed]);
+    // TODO: Apply points reward to user score if reward.type === 'points'
+  }, [onSpinClaimed]);
 
   // Handle combo expired
   const handleComboExpired = useCallback(() => {
@@ -204,35 +230,29 @@ export default function FeedScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
   }, [acceptStreakDeath]);
 
-  // Calculate peek data from current question
-  const calculatePeekData = useCallback((): PeekData | null => {
-    if (!currentQuestion) return null;
-    
-    const total = currentQuestion.votes_a + currentQuestion.votes_b;
-    if (total === 0) {
-      return { percentage_a: 50, percentage_b: 50, leading: 'tie' };
-    }
-    
-    const percentage_a = Math.round((currentQuestion.votes_a / total) * 100);
-    const percentage_b = 100 - percentage_a;
-    
-    let leading: 'a' | 'b' | 'tie' = 'tie';
-    if (currentQuestion.votes_a > currentQuestion.votes_b) leading = 'a';
-    else if (currentQuestion.votes_b > currentQuestion.votes_a) leading = 'b';
-    
-    return { percentage_a, percentage_b, leading };
-  }, [currentQuestion]);
+  const handleRefresh = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    refresh();
+  }, [refresh]);
 
-  // Update peek data when peek is activated
-  useEffect(() => {
-    if (peekActive && currentQuestion) {
-      setPeekData(calculatePeekData());
-    } else {
-      setPeekData(null);
-    }
-  }, [peekActive, currentQuestion, calculatePeekData]);
+  const handleMenuOpen = useCallback(() => {
+    setMenuVisible(true);
+  }, []);
 
-  // Handle using Peek power-up
+  const handleMenuClose = useCallback(() => {
+    setMenuVisible(false);
+  }, []);
+
+  const handleLevelUpClose = useCallback(() => {
+    setShowLevelUpModal(false);
+  }, []);
+
+  const handleLevelPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/profile');
+  }, []);
+
+  // Power-up handlers
   const handleUsePeek = useCallback(async () => {
     if (!uid || !user || peekActive) return;
     
@@ -240,7 +260,6 @@ export default function FeedScreen() {
     const { success, cost } = await activatePeek();
     
     if (success && cost > 0) {
-      // Deduct points from user if they didn't use inventory
       try {
         await deductUserScore(uid, cost);
       } catch (error) {
@@ -255,20 +274,13 @@ export default function FeedScreen() {
     }
   }, [uid, user, peekActive, activatePeek, deactivatePeek]);
 
-  // Handle using Skip power-up
   const handleUseSkip = useCallback(async () => {
-    console.log('[Skip] handleUseSkip called', { uid, user: !!user, currentQuestion: !!currentQuestion });
-    if (!uid || !user || !currentQuestion) {
-      console.log('[Skip] Early return - missing uid/user/question');
-      return;
-    }
+    if (!uid || !user || !currentQuestion) return;
     
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const { success, cost } = await activateSkip();
-    console.log('[Skip] activateSkip result:', { success, cost });
     
     if (success && cost > 0) {
-      // Deduct points from user if they didn't use inventory
       try {
         await deductUserScore(uid, cost);
       } catch (error) {
@@ -278,7 +290,6 @@ export default function FeedScreen() {
     }
     
     if (success) {
-      // Clear any active effects and move to next question
       clearActiveEffects();
       setPeekData(null);
       nextQuestion();
@@ -286,7 +297,6 @@ export default function FeedScreen() {
     }
   }, [uid, user, currentQuestion, activateSkip, clearActiveEffects, nextQuestion]);
 
-  // Handle using Double Down power-up
   const handleUseDoubleDown = useCallback(async () => {
     if (!uid || !user || doubleDownActive) return;
     
@@ -294,7 +304,6 @@ export default function FeedScreen() {
     const { success, cost } = await activateDoubleDown();
     
     if (success && cost > 0) {
-      // Deduct points from user if they didn't use inventory
       try {
         await deductUserScore(uid, cost);
       } catch (error) {
@@ -307,19 +316,6 @@ export default function FeedScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   }, [uid, user, doubleDownActive, activateDoubleDown]);
-
-  const handleRefresh = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    refresh();
-  }, [refresh]);
-
-  const handleMenuOpen = useCallback(() => {
-    setMenuVisible(true);
-  }, []);
-
-  const handleMenuClose = useCallback(() => {
-    setMenuVisible(false);
-  }, []);
 
   // Loading state
   if (questionsLoading && !currentQuestion) {
@@ -386,11 +382,11 @@ export default function FeedScreen() {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f4f5' }}>
         <AppHeader 
-          score={user?.score ?? 0} 
-          currentStreak={user?.current_streak ?? 0}
-          lastDeadStreak={lastDeadStreak}
-          daysSinceDeath={daysSinceDeath}
+          score={user?.score ?? 0}
+          level={user?.level ?? calculateLevel(user?.xp ?? 0)}
+          xp={user?.xp ?? 0}
           onMenuPress={handleMenuOpen}
+          onLevelPress={handleLevelPress}
         />
         
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
@@ -454,12 +450,9 @@ export default function FeedScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f4f5' }}>
-      {/* App Header with Streak Meter */}
+      {/* App Header */}
       <AppHeader 
         score={user?.score ?? 0} 
-        currentStreak={user?.current_streak ?? 0}
-        lastDeadStreak={lastDeadStreak}
-        daysSinceDeath={daysSinceDeath}
         onMenuPress={handleMenuOpen}
       />
 
@@ -614,6 +607,13 @@ export default function FeedScreen() {
         onUseFreeze={handleUseStreakFreeze}
         onAcceptDeath={handleAcceptStreakDeath}
         onClose={closeDeathModal}
+      />
+
+      {/* Level Up Celebration Modal */}
+      <LevelUpModal
+        visible={showLevelUpModal}
+        newLevel={newLevelToShow}
+        onClose={handleLevelUpClose}
       />
 
     </SafeAreaView>

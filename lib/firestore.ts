@@ -19,7 +19,6 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { STARTING_SCORE, QUESTION_CREATION_COST, DAILY_QUESTION_LIMIT, COMPLIANCE } from './constants';
-import { getTodayDate } from './dateUtils';
 import type { User, Question, Vote, VoteChoice, CreateQuestionInput, VoteResult, VoteHistoryItem, UserStats, LeaderboardEntry } from '../types';
 
 // Collection references
@@ -194,6 +193,11 @@ export async function getQuestions(
   }
   
   return { questions, lastDoc: newLastDoc };
+}
+
+// Get today's date as ISO string
+function getTodayDate(): string {
+  return new Date().toISOString().split('T')[0];
 }
 
 // Vote on a question with transaction (prevents cheating)
@@ -522,7 +526,7 @@ export function canUserVote(user: User): boolean {
   return getUserRemainingVotes(user) > 0;
 }
 
-// Deduct points from user score (for power-up purchases)
+// Deduct score from user (for power-up purchases)
 export async function deductUserScore(uid: string, amount: number): Promise<void> {
   const userRef = getUserRef(uid);
   
@@ -547,12 +551,12 @@ export async function deductUserScore(uid: string, amount: number): Promise<void
   });
 }
 
-// Add points to user score (for rewards from chests/spin)
+// Add score to user (for rewards)
 export async function addUserScore(uid: string, amount: number): Promise<void> {
   const userRef = getUserRef(uid);
   
-  await setDoc(userRef, {
+  await updateDoc(userRef, {
     score: increment(amount),
     last_active: serverTimestamp(),
-  }, { merge: true });
+  });
 }

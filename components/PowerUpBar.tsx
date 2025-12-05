@@ -77,7 +77,11 @@ function PowerUpButton({
   }));
 
   return (
-    <Pressable onPress={handlePress}>
+    <Pressable 
+      onPress={handlePress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
       <Animated.View 
         style={[
           styles.powerUpButton,
