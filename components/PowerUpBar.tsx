@@ -28,6 +28,7 @@ interface PowerUpBarProps {
   onUseDoubleDown: () => void;
   disabled?: boolean;
   hidden?: boolean;
+  compact?: boolean; // New prop for 56px height mode
 }
 
 interface PowerUpButtonProps {
@@ -40,6 +41,7 @@ interface PowerUpButtonProps {
   onPress: () => void;
   disabled?: boolean;
   color: string;
+  compact?: boolean;
 }
 
 function PowerUpButton({ 
@@ -52,6 +54,7 @@ function PowerUpButton({
   onPress, 
   disabled,
   color,
+  compact,
 }: PowerUpButtonProps) {
   const scale = useSharedValue(1);
   const canAfford = userScore >= cost;
@@ -87,29 +90,36 @@ function PowerUpButton({
       <Animated.View 
         style={[
           styles.powerUpButton,
+          compact && styles.powerUpButtonCompact,
           isActive && { backgroundColor: `${color}30`, borderColor: color },
           isDisabled && !isActive && styles.powerUpButtonDisabled,
           animatedStyle,
         ]}
       >
         {/* Icon */}
-        <View style={styles.iconContainer}>
+        <View style={[styles.iconContainer, compact && styles.iconContainerCompact]}>
           {icon}
         </View>
         
-        {/* Label */}
-        <Text style={[
-          styles.powerUpLabel,
-          isActive && { color },
-          isDisabled && !isActive && styles.textDisabled,
-        ]}>
-          {label}
-        </Text>
+        {/* Label - hidden in compact mode */}
+        {!compact && (
+          <Text style={[
+            styles.powerUpLabel,
+            isActive && { color },
+            isDisabled && !isActive && styles.textDisabled,
+          ]}>
+            {label}
+          </Text>
+        )}
         
         {/* Count badge */}
         {count > 0 && (
-          <View style={[styles.countBadge, { backgroundColor: color }]}>
-            <Text style={styles.countText}>{count}</Text>
+          <View style={[
+            styles.countBadge, 
+            { backgroundColor: color },
+            compact && styles.countBadgeCompact,
+          ]}>
+            <Text style={[styles.countText, compact && styles.countTextCompact]}>{count}</Text>
           </View>
         )}
         
@@ -117,10 +127,12 @@ function PowerUpButton({
         {count <= 0 && (
           <View style={[
             styles.costBadge,
+            compact && styles.costBadgeCompact,
             !canAfford && styles.costBadgeDisabled,
           ]}>
             <Text style={[
               styles.costText,
+              compact && styles.costTextCompact,
               !canAfford && styles.costTextDisabled,
             ]}>
               {cost}pt
@@ -130,8 +142,12 @@ function PowerUpButton({
 
         {/* Active indicator */}
         {isActive && (
-          <View style={[styles.activeIndicator, { backgroundColor: color }]}>
-            <Text style={styles.activeText}>ON</Text>
+          <View style={[
+            styles.activeIndicator, 
+            { backgroundColor: color },
+            compact && styles.activeIndicatorCompact,
+          ]}>
+            <Text style={[styles.activeText, compact && styles.activeTextCompact]}>ON</Text>
           </View>
         )}
       </Animated.View>
@@ -149,15 +165,22 @@ export function PowerUpBar({
   onUseDoubleDown,
   disabled = false,
   hidden = false,
+  compact = false,
 }: PowerUpBarProps) {
+  const iconSize = compact ? 22 : 28;
+  
   return (
-    <View style={[styles.container, hidden && styles.hidden]}>
-      <View style={styles.powerUpsRow}>
+    <View style={[
+      styles.container, 
+      compact && styles.containerCompact,
+      hidden && styles.hidden,
+    ]}>
+      <View style={[styles.powerUpsRow, compact && styles.powerUpsRowCompact]}>
         {/* Peek */}
         <PowerUpButton
           icon={
             <DuotoneEye 
-              size={28} 
+              size={iconSize} 
               primaryColor={peekActive ? COLORS.accent : COLORS.primary}
               accentColor={COLORS.secondary}
             />
@@ -170,13 +193,14 @@ export function PowerUpBar({
           onPress={onUsePeek}
           disabled={disabled || peekActive}
           color={COLORS.accent}
+          compact={compact}
         />
 
         {/* Skip */}
         <PowerUpButton
           icon={
             <DuotoneSkip 
-              size={28} 
+              size={iconSize} 
               primaryColor={COLORS.primary}
               accentColor={COLORS.secondary}
             />
@@ -188,13 +212,14 @@ export function PowerUpBar({
           onPress={onUseSkip}
           disabled={disabled}
           color={COLORS.primary}
+          compact={compact}
         />
 
         {/* Double Down */}
         <PowerUpButton
           icon={
             <DuotoneDice 
-              size={28} 
+              size={iconSize} 
               primaryColor={doubleDownActive ? COLORS.secondary : COLORS.primary}
               accentColor={COLORS.secondary}
             />
@@ -207,11 +232,12 @@ export function PowerUpBar({
           onPress={onUseDoubleDown}
           disabled={disabled || doubleDownActive}
           color={COLORS.secondary}
+          compact={compact}
         />
       </View>
 
-      {/* Active power-up indicator */}
-      {(peekActive || doubleDownActive) && (
+      {/* Active power-up indicator - hidden in compact mode */}
+      {!compact && (peekActive || doubleDownActive) && (
         <View style={styles.activeWarning}>
           {peekActive && (
             <Text style={[styles.activeWarningText, { color: COLORS.accent }]}>
@@ -234,6 +260,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
+  containerCompact: {
+    paddingVertical: 4,
+    height: 56,
+    justifyContent: 'center',
+  },
   hidden: {
     opacity: 0,
     pointerEvents: 'none',
@@ -242,6 +273,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 12,
+  },
+  powerUpsRowCompact: {
+    gap: 8,
   },
   powerUpButton: {
     alignItems: 'center',
@@ -260,11 +294,21 @@ const styles = StyleSheet.create({
     elevation: 4,
     position: 'relative',
   },
+  powerUpButtonCompact: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    minWidth: 50,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
   powerUpButtonDisabled: {
     opacity: 0.5,
   },
   iconContainer: {
     marginBottom: 4,
+  },
+  iconContainerCompact: {
+    marginBottom: 0,
   },
   powerUpLabel: {
     fontSize: 11,
@@ -285,10 +329,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 4,
   },
+  countBadgeCompact: {
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+  },
   countText: {
     fontSize: 11,
     fontFamily: 'Poppins_700Bold',
     color: '#fff',
+  },
+  countTextCompact: {
+    fontSize: 9,
   },
   costBadge: {
     position: 'absolute',
@@ -299,6 +353,13 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 8,
   },
+  costBadgeCompact: {
+    top: -4,
+    right: -4,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 6,
+  },
   costBadgeDisabled: {
     backgroundColor: COLORS.destructive,
   },
@@ -306,6 +367,9 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontFamily: 'Poppins_600SemiBold',
     color: '#fff',
+  },
+  costTextCompact: {
+    fontSize: 8,
   },
   costTextDisabled: {
     color: '#fff',
@@ -317,10 +381,19 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 6,
   },
+  activeIndicatorCompact: {
+    bottom: -6,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
   activeText: {
     fontSize: 8,
     fontFamily: 'Poppins_700Bold',
     color: '#fff',
+  },
+  activeTextCompact: {
+    fontSize: 7,
   },
   activeWarning: {
     marginTop: 12,

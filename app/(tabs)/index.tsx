@@ -17,8 +17,9 @@ import { useComplianceContext } from '../../components/ComplianceProvider';
 import { useHyperstreak } from '../../hooks/useHyperstreak';
 import { AppHeader } from '../../components/AppHeader';
 import { UserMenu } from '../../components/UserMenu';
-import { QuestionCard } from '../../components/QuestionCard';
+import { QuestionTeaser } from '../../components/QuestionTeaser';
 import { VoteButtons } from '../../components/VoteButtons';
+import { AnswerMorphReveal, AnswerMorphRevealRef } from '../../components/AnswerMorphReveal';
 import { AchievementToast } from '../../components/AchievementToast';
 import { MysteryChest } from '../../components/MysteryChest';
 import { DailySpinWheel } from '../../components/DailySpinWheel';
@@ -26,7 +27,6 @@ import { StreakStrip } from '../../components/StreakStrip';
 import { StreakDeathAnimation } from '../../components/StreakDeathAnimation';
 import { PowerUpBar } from '../../components/PowerUpBar';
 import { LevelUpModal } from '../../components/LevelUpModal';
-import { ResultReveal } from '../../components/ResultReveal';
 import { ConfettiCannon } from '../../components/ConfettiCannon';
 import { ScreenFlash } from '../../components/ScreenFlash';
 import { HyperstreakActivation } from '../../components/HyperstreakActivation';
@@ -54,7 +54,7 @@ export default function FeedScreen() {
   const { userRank } = useLeaderboard(uid);
   const { canVote, remainingVotes, showDailyVoteLimitModal, isMinor } = useComplianceContext();
   
-  // Hyperstreak management (2x dopamine mode) - must be before useDopamineFeatures
+  // Hyperstreak management (2x dopamine mode)
   const {
     hyperBar,
     inHyperstreak,
@@ -111,22 +111,25 @@ export default function FeedScreen() {
     closeDeathModal,
   } = useStreakManager(user, hasStreakFreeze);
   
+  // ═══════════════════════════════════════════════════════════════
+  // STATE
+  // ═══════════════════════════════════════════════════════════════
   const [showingResult, setShowingResult] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
   const [userChoice, setUserChoice] = useState<'a' | 'b' | null>(null);
-  const [showCelebration, setShowCelebration] = useState(false);
   const [pendingChestReward, setPendingChestReward] = useState<Reward | null>(null);
 
   // Visual feedback states
   const [showConfetti, setShowConfetti] = useState(false);
   const [showFlash, setShowFlash] = useState(false);
   const [flashVariant, setFlashVariant] = useState<'correct' | 'wrong'>('correct');
-  const [show2xBlast, setShow2xBlast] = useState(false);
-  const [hyperWinCoins, setHyperWinCoins] = useState(0);
   
   // Track pending streak death to show after result animation
   const [pendingStreakDeath, setPendingStreakDeath] = useState<number | null>(null);
+
+  // Morph Reveal ref (imperative API)
+  const morphRevealRef = useRef<AnswerMorphRevealRef>(null);
 
   // Peek data for showing vote percentages
   interface PeekData {
@@ -177,6 +180,10 @@ export default function FeedScreen() {
     }
   }, [user?.level, user?.xp]);
 
+  // ═══════════════════════════════════════════════════════════════
+  // HANDLERS
+  // ═══════════════════════════════════════════════════════════════
+
   // Handle achievement toast dismissal
   const handleAchievementDismiss = useCallback(() => {
     if (currentAchievementIndex < newlyUnlocked.length - 1) {
@@ -187,6 +194,9 @@ export default function FeedScreen() {
     }
   }, [currentAchievementIndex, newlyUnlocked.length, clearNewlyUnlocked]);
 
+  // ═══════════════════════════════════════════════════════════════
+  // VOTE HANDLER - Triggers the dopamine bomb
+  // ═══════════════════════════════════════════════════════════════
   const handleVote = useCallback(async (choice: VoteChoice) => {
     if (!uid || !currentQuestion || voteLoading || showingResult) return;
     
@@ -198,6 +208,7 @@ export default function FeedScreen() {
     
     setUserChoice(choice);
     setShowingResult(true);
+    
     const result = await vote(uid, currentQuestion.id, choice);
     
     // Check if vote failed due to daily limit
@@ -208,79 +219,65 @@ export default function FeedScreen() {
       return;
     }
     
-    // Trigger visual feedback
     if (result) {
+      // ═══════════════════════════════════════════════════════════
+      // TRIGGER THE MORPH REVEAL (The Dopamine Bomb)
+      // ═══════════════════════════════════════════════════════════
+      morphRevealRef.current?.reveal(result, choice, {
+        inHyperstreak,
+        doubleDownActive,
+      });
+      
+      // Visual feedback (screen flash)
       setFlashVariant(result.won ? 'correct' : 'wrong');
       setShowFlash(true);
       
       if (result.won) {
-        setShowConfetti(true);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         
-        // ═══════════════════════════════════════════════════════════════
-        // HYPERSTREAK LOGIC - On correct answer
-        // ═══════════════════════════════════════════════════════════════
+        // Hyperstreak logic
         if (inHyperstreak) {
-          // In hyperstreak - 2x rewards + tick question
-          setShow2xBlast(true);
-          setHyperWinCoins(2); // 2x coins (base 1 * 2)
-          
-          // Tick the hyperstreak question counter
           tickHyperQuestion();
         } else {
-          // Not in hyperstreak - increment bar toward activation
           incrementHyperBar();
         }
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        
-        // ═══════════════════════════════════════════════════════════════
-        // HYPERSTREAK LOGIC - On wrong answer
-        // ═══════════════════════════════════════════════════════════════
-        crashHyperstreak(); // Resets bar, triggers crash anim if was in hyper
+        crashHyperstreak();
       }
       
-      setShowCelebration(true);
+      // Check for streak death (loss aversion trigger)
+      const lostStreak = !result.won && result.previousStreak > 0;
+      if (lostStreak) {
+        setPendingStreakDeath(result.previousStreak);
+      }
+      
+      // Check for mystery chest after vote
+      if (user) {
+        onVoteComplete(user.votes_cast + 1, result.won, {
+          lostStreak: lostStreak ?? false,
+        });
+      }
+      
+      // Clear active power-up effects
+      clearActiveEffects();
+      setPeekData(null);
     }
-    
-    // Check for streak death (loss aversion trigger)
-    const lostStreak = result && !result.won && result.previousStreak > 0;
-    if (lostStreak) {
-      // Store the lost streak to show death modal after result animation completes
-      setPendingStreakDeath(result.previousStreak);
-    }
-    
-    // Check for mystery chest after vote
-    // Only show chest on WINS and when no other important events (like streak death) are happening
-    if (result && user) {
-      onVoteComplete(user.votes_cast + 1, result.won, {
-        lostStreak: lostStreak ?? false,
-      });
-      // Chest will show after result animation completes (only on wins)
-    }
-    
-    // Clear active power-up effects after vote
-    clearActiveEffects();
-    setPeekData(null);
-  }, [uid, currentQuestion, vote, voteLoading, showingResult, canVote, showDailyVoteLimitModal, voteError, user, onVoteComplete, handleStreakDeath, clearActiveEffects]);
+  }, [uid, currentQuestion, vote, voteLoading, showingResult, canVote, showDailyVoteLimitModal, voteError, user, onVoteComplete, inHyperstreak, doubleDownActive, clearActiveEffects, incrementHyperBar, tickHyperQuestion, crashHyperstreak]);
 
-  // Handle celebration complete
-  const handleCelebrationComplete = useCallback(() => {
-    setShowCelebration(false);
+  // ═══════════════════════════════════════════════════════════════
+  // MORPH COMPLETE - Called when reveal animation finishes
+  // ═══════════════════════════════════════════════════════════════
+  const handleMorphComplete = useCallback(() => {
     setShowingResult(false);
     setUserChoice(null);
-    setShowConfetti(false);
     setShowFlash(false);
-    setShow2xBlast(false);
-    setHyperWinCoins(0);
     resetVote();
 
     // Check if we have a pending streak death to show
     if (pendingStreakDeath !== null) {
-      // Trigger the streak death modal immediately
       handleStreakDeath(pendingStreakDeath);
       setPendingStreakDeath(null);
-      // Don't advance to next question - death modal will handle that on close
       return;
     }
 
@@ -317,34 +314,26 @@ export default function FeedScreen() {
   const handleUseStreakFreeze = useCallback(async () => {
     const success = await useStreakFreeze();
     if (success) {
-      // Consume the streak freeze power-up
       useStreakFreezeItem();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Advance to next question after modal closes
       nextQuestion();
     }
   }, [useStreakFreeze, useStreakFreezeItem, nextQuestion]);
 
-  // Handle reviving with ad (no freeze consumed)
+  // Handle reviving with ad
   const handleReviveWithAd = useCallback(async () => {
-    // In production, this would show a rewarded ad first
-    // For now, directly revive
     const success = await reviveWithAd();
     if (success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Advance to next question after modal closes
       nextQuestion();
     }
   }, [reviveWithAd, nextQuestion]);
 
-  // Handle reviving with share (viral growth hack)
+  // Handle reviving with share
   const handleReviveWithShare = useCallback(async () => {
-    // Share was already triggered in ReviveOptions
-    // Now just complete the revive
     const success = await reviveWithShare();
     if (success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Advance to next question after modal closes
       nextQuestion();
     }
   }, [reviveWithShare, nextQuestion]);
@@ -353,14 +342,12 @@ export default function FeedScreen() {
   const handleAcceptStreakDeath = useCallback(async () => {
     await acceptStreakDeath();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    // Advance to next question after modal closes
     nextQuestion();
   }, [acceptStreakDeath, nextQuestion]);
   
-  // Handle closing death modal (user dismissed without action)
+  // Handle closing death modal
   const handleCloseDeathModal = useCallback(() => {
     closeDeathModal();
-    // Still advance to next question
     nextQuestion();
   }, [closeDeathModal, nextQuestion]);
 
@@ -451,6 +438,10 @@ export default function FeedScreen() {
     }
   }, [uid, user, doubleDownActive, activateDoubleDown]);
 
+  // ═══════════════════════════════════════════════════════════════
+  // RENDER STATES
+  // ═══════════════════════════════════════════════════════════════
+
   // Loading state
   if (questionsLoading && !currentQuestion) {
     return (
@@ -528,6 +519,9 @@ export default function FeedScreen() {
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // MAIN RENDER - Buttons-Only Layout
+  // ═══════════════════════════════════════════════════════════════
   return (
     <View style={styles.container}>
       {/* Dark gradient background */}
@@ -536,19 +530,21 @@ export default function FeedScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      <SafeAreaView style={{ flex: 1 }}>
-        {/* App Header with glassmorphism */}
-        <AppHeader
-          level={user?.level ?? calculateLevel(user?.xp ?? 0)}
-          rank={userRank}
-          canSpin={canSpin}
-          onMenuPress={handleMenuOpen}
-          onLevelPress={handleLevelPress}
-          onSpinPress={openDailySpin}
-        />
+      <SafeAreaView style={styles.safeArea}>
+        {/* ═══════════════════════════════════════════════════════════
+            TOP 15% - AppHeader + StreakStrip
+        ═══════════════════════════════════════════════════════════ */}
+        <View style={styles.headerSection}>
+          <AppHeader
+            level={user?.level ?? calculateLevel(user?.xp ?? 0)}
+            rank={userRank}
+            canSpin={canSpin}
+            onMenuPress={handleMenuOpen}
+            onLevelPress={handleLevelPress}
+            onSpinPress={openDailySpin}
+          />
 
-        {/* Streak Strip with Hyperstreak Integration */}
-        <View style={styles.streakContainer}>
+          {/* Streak Strip with Hyperstreak Integration */}
           <StreakStrip
             currentStreak={user?.current_streak ?? 0}
             bestStreak={user?.best_streak ?? 0}
@@ -559,7 +555,7 @@ export default function FeedScreen() {
           />
         </View>
 
-        {/* Active Multiplier Indicator - Enhanced during Hyperstreak */}
+        {/* Active Multiplier Indicator */}
         {(activeMultiplier > 1 || inHyperstreak) && (
           <View style={[
             styles.multiplierBadge,
@@ -573,76 +569,71 @@ export default function FeedScreen() {
             </Text>
           </View>
         )}
-        
-        {/* 2X BLAST Badge - Shows on correct during hyperstreak */}
-        {show2xBlast && inHyperstreak && (
-          <Animated.View 
-            entering={FadeIn.duration(200)}
-            style={styles.blastBadge}
-          >
-            <Text style={styles.blastText}>2X BLAST! 💥</Text>
-          </Animated.View>
-        )}
 
-        {/* Main Content Area */}
-        <View style={styles.mainContent}>
-          {/* Card Container - holds both question and result in same position */}
-          <View style={styles.cardContainer}>
-            {/* Question Card - Always visible underneath */}
-            {currentQuestion && (
-              <QuestionCard 
-                key={currentQuestion.id}
-                question={currentQuestion}
-                voteResult={voteResult}
-                peekData={peekData}
-                doubleDownActive={doubleDownActive}
-              />
-            )}
-            
-            {/* Result Reveal - Overlays directly on top of question card */}
-            {currentQuestion && showingResult && voteResult && (
-              <ResultReveal
-                visible={showingResult}
-                question={currentQuestion}
-                result={voteResult}
-                onComplete={handleCelebrationComplete}
-              />
-            )}
+        {/* ═══════════════════════════════════════════════════════════
+            NEXT 10% - Question Teaser
+        ═══════════════════════════════════════════════════════════ */}
+        {currentQuestion && (
+          <View style={styles.teaserSection}>
+            <QuestionTeaser 
+              text={currentQuestion.text}
+              visible={!showingResult}
+            />
           </View>
-        </View>
-
-        {/* Power-Up Bar */}
-        {currentQuestion && (
-          <PowerUpBar
-            powerUps={powerUps}
-            userScore={user?.score ?? 0}
-            doubleDownActive={doubleDownActive}
-            peekActive={peekActive}
-            onUsePeek={handleUsePeek}
-            onUseSkip={handleUseSkip}
-            onUseDoubleDown={handleUseDoubleDown}
-            disabled={voteLoading}
-            hidden={showingResult}
-          />
         )}
 
-        {/* Vote Buttons - Stacked vertically, pulse during hyperstreak */}
+        {/* ═══════════════════════════════════════════════════════════
+            65% - Hero Vote Buttons
+        ═══════════════════════════════════════════════════════════ */}
         {currentQuestion && (
-          <View style={inHyperstreak ? styles.hyperButtonsContainer : undefined}>
+          <View style={styles.heroButtonsSection}>
             <VoteButtons
               optionA={currentQuestion.option_a}
               optionB={currentQuestion.option_b}
               onVote={handleVote}
               disabled={voteLoading || showingResult}
               hidden={showingResult}
+              inHyperstreak={inHyperstreak}
+              peekData={peekData}
+              doubleDownActive={doubleDownActive}
             />
-            {/* Hyperstreak border glow overlay */}
-            {inHyperstreak && !showingResult && (
-              <View style={styles.hyperGlowOverlay} pointerEvents="none" />
-            )}
           </View>
         )}
 
+        {/* ═══════════════════════════════════════════════════════════
+            BOTTOM 10% - Compact PowerUpBar
+        ═══════════════════════════════════════════════════════════ */}
+        {currentQuestion && (
+          <View style={styles.powerUpSection}>
+            <PowerUpBar
+              powerUps={powerUps}
+              userScore={user?.score ?? 0}
+              doubleDownActive={doubleDownActive}
+              peekActive={peekActive}
+              onUsePeek={handleUsePeek}
+              onUseSkip={handleUseSkip}
+              onUseDoubleDown={handleUseDoubleDown}
+              disabled={voteLoading}
+              hidden={showingResult}
+              compact={true}
+            />
+          </View>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════
+            ANSWER MORPH REVEAL - The Dopamine Bomb (Absolute positioned)
+        ═══════════════════════════════════════════════════════════ */}
+        <AnswerMorphReveal
+          ref={morphRevealRef}
+          optionA={currentQuestion?.option_a ?? ''}
+          optionB={currentQuestion?.option_b ?? ''}
+          onComplete={handleMorphComplete}
+        />
+
+        {/* ═══════════════════════════════════════════════════════════
+            MODALS & OVERLAYS
+        ═══════════════════════════════════════════════════════════ */}
+        
         {/* User Menu */}
         <UserMenu 
           visible={menuVisible}
@@ -674,7 +665,7 @@ export default function FeedScreen() {
           onRewardClaimed={handleSpinReward}
         />
 
-        {/* Epic Streak Death Animation (Loss Aversion + FOMO) */}
+        {/* Epic Streak Death Animation */}
         <StreakDeathAnimation
           visible={showDeathModal}
           deadStreak={deadStreak}
@@ -713,19 +704,20 @@ export default function FeedScreen() {
         variant={flashVariant}
         onComplete={() => setShowFlash(false)}
       />
-      <ConfettiCannon 
-        shoot={showConfetti}
-        variant="correct"
-        onComplete={() => setShowConfetti(false)}
-      />
     </View>
   );
 }
 
+// ═══════════════════════════════════════════════════════════════
+// STYLES - Buttons-Only Layout
+// ═══════════════════════════════════════════════════════════════
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  safeArea: {
+    flex: 1,
   },
   centerContent: {
     flex: 1,
@@ -792,16 +784,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Righteous_400Regular',
   },
-  streakContainer: {
-    position: 'absolute',
-    top: 100,
-    left: 0,
-    right: 0,
-    zIndex: 5,
+  
+  // ═══════════════════════════════════════════════════════════════
+  // LAYOUT SECTIONS
+  // ═══════════════════════════════════════════════════════════════
+  headerSection: {
+    // ~15% of screen
   },
+  teaserSection: {
+    // ~10% of screen
+    justifyContent: 'center',
+  },
+  heroButtonsSection: {
+    flex: 1, // Takes remaining ~65%
+    marginHorizontal: 0,
+  },
+  powerUpSection: {
+    // ~10% of screen (56px fixed)
+  },
+  
+  // Multiplier badge
   multiplierBadge: {
     position: 'absolute',
-    top: 100,
+    top: 140,
     left: 16,
     backgroundColor: COLORS.primary,
     paddingHorizontal: 12,
@@ -814,15 +819,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Righteous_400Regular',
   },
-  mainContent: {
-    flex: 1,
-    justifyContent: 'center',
-    marginTop: 80,
-  },
-  cardContainer: {
-    position: 'relative',
-  },
-  // Hyperstreak styles
   hyperMultiplierBadge: {
     backgroundColor: HYPER.COLOR_ACTIVE,
     borderWidth: 2,
@@ -836,42 +832,5 @@ const styles = StyleSheet.create({
     color: '#000',
     fontFamily: 'SpaceGrotesk_700Bold',
     letterSpacing: 1,
-  },
-  blastBadge: {
-    position: 'absolute',
-    top: 160,
-    alignSelf: 'center',
-    backgroundColor: HYPER.COLOR_ACTIVE,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    shadowColor: HYPER.COLOR_ACTIVE,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
-    zIndex: 100,
-  },
-  blastText: {
-    color: '#000',
-    fontSize: 20,
-    fontFamily: 'Righteous_400Regular',
-    letterSpacing: 2,
-  },
-  hyperButtonsContainer: {
-    position: 'relative',
-  },
-  hyperGlowOverlay: {
-    position: 'absolute',
-    top: -4,
-    left: 12,
-    right: 12,
-    bottom: -4,
-    borderRadius: 20,
-    borderWidth: 3,
-    borderColor: HYPER.COLOR_ACTIVE,
-    shadowColor: HYPER.COLOR_ACTIVE,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 15,
   },
 });
