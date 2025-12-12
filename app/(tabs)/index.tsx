@@ -22,7 +22,7 @@ import { AchievementToast } from '../../components/AchievementToast';
 import { MysteryChest } from '../../components/MysteryChest';
 import { DailySpinWheel } from '../../components/DailySpinWheel';
 import { StreakStrip } from '../../components/StreakStrip';
-import { StreakDeathModal } from '../../components/StreakDeathModal';
+import { StreakDeathAnimation } from '../../components/StreakDeathAnimation';
 import { PowerUpBar } from '../../components/PowerUpBar';
 import { LevelUpModal } from '../../components/LevelUpModal';
 import { ResultReveal } from '../../components/ResultReveal';
@@ -83,6 +83,8 @@ export default function FeedScreen() {
     lastDeadStreak,
     handleStreakDeath,
     useStreakFreeze,
+    reviveWithAd,
+    reviveWithShare,
     acceptStreakDeath,
     closeDeathModal,
   } = useStreakManager(user, hasStreakFreeze);
@@ -254,6 +256,26 @@ export default function FeedScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   }, [useStreakFreeze, useStreakFreezeItem]);
+
+  // Handle reviving with ad (no freeze consumed)
+  const handleReviveWithAd = useCallback(async () => {
+    // In production, this would show a rewarded ad first
+    // For now, directly revive
+    const success = await reviveWithAd();
+    if (success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [reviveWithAd]);
+
+  // Handle reviving with share (viral growth hack)
+  const handleReviveWithShare = useCallback(async () => {
+    // Share was already triggered in ReviveOptions
+    // Now just complete the revive
+    const success = await reviveWithShare();
+    if (success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [reviveWithShare]);
 
   // Handle accepting streak death
   const handleAcceptStreakDeath = useCallback(async () => {
@@ -543,12 +565,14 @@ export default function FeedScreen() {
           onRewardClaimed={handleSpinReward}
         />
 
-        {/* Streak Death Modal (Loss Aversion) */}
-        <StreakDeathModal
+        {/* Epic Streak Death Animation (Loss Aversion + FOMO) */}
+        <StreakDeathAnimation
           visible={showDeathModal}
           deadStreak={deadStreak}
           hasStreakFreeze={hasStreakFreeze}
           onUseFreeze={handleUseStreakFreeze}
+          onWatchAd={handleReviveWithAd}
+          onShareRevive={handleReviveWithShare}
           onAcceptDeath={handleAcceptStreakDeath}
           onClose={closeDeathModal}
         />

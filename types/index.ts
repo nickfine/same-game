@@ -25,6 +25,10 @@ export interface User {
   // Streak death tracking (for loss aversion)
   last_dead_streak: number | null; // The streak value when it died
   streak_death_date: string | null; // ISO date when streak died (for cracked badge)
+  
+  // Revival tracking (for analytics)
+  ad_revives?: number; // How many times revived via ad
+  share_revives?: number; // How many times revived via sharing
 }
 
 // Compliance/Playtime tracking (separate collection for weekly resets)

@@ -1,15 +1,19 @@
 import { useState, useCallback, useMemo } from 'react';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { getTodayDate, daysBetween } from '../lib/dateUtils';
 import type { User } from '../types';
 
 const CRACKED_BADGE_DAYS = 7;
 
+// Revival methods
+export type ReviveMethod = 'freeze' | 'ad' | 'share';
+
 interface StreakManagerState {
   showDeathModal: boolean;
   deadStreak: number;
   streakSaved: boolean;
+  reviveMethod: ReviveMethod | null;
 }
 
 export function useStreakManager(user: User | null, hasStreakFreeze: boolean) {
@@ -17,6 +21,7 @@ export function useStreakManager(user: User | null, hasStreakFreeze: boolean) {
     showDeathModal: false,
     deadStreak: 0,
     streakSaved: false,
+    reviveMethod: null,
   });
 
   // Calculate days since last streak death
@@ -40,6 +45,7 @@ export function useStreakManager(user: User | null, hasStreakFreeze: boolean) {
       showDeathModal: true,
       deadStreak: deadStreakValue,
       streakSaved: false,
+      reviveMethod: null,
     });
   }, []);
 
@@ -59,6 +65,7 @@ export function useStreakManager(user: User | null, hasStreakFreeze: boolean) {
         ...prev,
         showDeathModal: false,
         streakSaved: true,
+        reviveMethod: 'freeze',
       }));
 
       return true;
@@ -67,6 +74,62 @@ export function useStreakManager(user: User | null, hasStreakFreeze: boolean) {
       return false;
     }
   }, [user, hasStreakFreeze, state.deadStreak]);
+
+  // Called when user watches an ad to revive
+  const reviveWithAd = useCallback(async () => {
+    if (!user) return false;
+
+    try {
+      // Restore the streak without consuming a freeze
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        current_streak: state.deadStreak,
+        last_active: serverTimestamp(),
+        // Track ad revives for analytics
+        ad_revives: increment(1),
+      });
+
+      setState(prev => ({
+        ...prev,
+        showDeathModal: false,
+        streakSaved: true,
+        reviveMethod: 'ad',
+      }));
+
+      return true;
+    } catch (error) {
+      console.error('Failed to revive with ad:', error);
+      return false;
+    }
+  }, [user, state.deadStreak]);
+
+  // Called when user shares to friends to revive
+  const reviveWithShare = useCallback(async () => {
+    if (!user) return false;
+
+    try {
+      // Restore the streak
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        current_streak: state.deadStreak,
+        last_active: serverTimestamp(),
+        // Track share revives for analytics
+        share_revives: increment(1),
+      });
+
+      setState(prev => ({
+        ...prev,
+        showDeathModal: false,
+        streakSaved: true,
+        reviveMethod: 'share',
+      }));
+
+      return true;
+    } catch (error) {
+      console.error('Failed to revive with share:', error);
+      return false;
+    }
+  }, [user, state.deadStreak]);
 
   // Called when user accepts the streak death
   const acceptStreakDeath = useCallback(async () => {
@@ -83,6 +146,7 @@ export function useStreakManager(user: User | null, hasStreakFreeze: boolean) {
       setState(prev => ({
         ...prev,
         showDeathModal: false,
+        reviveMethod: null,
       }));
     } catch (error) {
       console.error('Failed to record streak death:', error);
@@ -117,6 +181,7 @@ export function useStreakManager(user: User | null, hasStreakFreeze: boolean) {
     showDeathModal: state.showDeathModal,
     deadStreak: state.deadStreak,
     streakSaved: state.streakSaved,
+    reviveMethod: state.reviveMethod,
     
     // Computed
     daysSinceDeath,
@@ -126,6 +191,8 @@ export function useStreakManager(user: User | null, hasStreakFreeze: boolean) {
     // Actions
     handleStreakDeath,
     useStreakFreeze,
+    reviveWithAd,
+    reviveWithShare,
     acceptStreakDeath,
     closeDeathModal,
     clearCrackedBadge,
