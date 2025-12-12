@@ -4,13 +4,13 @@
 // ═══════════════════════════════════════════════════════════════
 
 export const HYPER = {
-  BAR_MAX: 10,              // 10 correct answers to trigger hyperstreak
+  BAR_MAX: 5,               // 5 correct answers to trigger hyperstreak
   DURATION_QUESTIONS: 5,    // Hyperstreak lasts for 5 questions
   MULTIPLIER: 2,            // 2x all rewards during hyperstreak
   FREEZE_CAPACITY_BONUS: 1, // +1 streak freeze capacity during hyper
   
   // Visual thresholds
-  PULSE_THRESHOLD: 8,       // Start pulsing animation at 8+ bar
+  PULSE_THRESHOLD: 4,       // Start pulsing animation at 4+ bar (80% of max)
   
   // Animation timing (ms)
   ACTIVATION_DURATION: 1200,

@@ -14,8 +14,8 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// Maximum allowed hyper_bar value
-const HYPER_BAR_MAX = 10;
+// Maximum allowed hyper_bar value (must match HYPER.BAR_MAX in client)
+const HYPER_BAR_MAX = 5;
 
 /**
  * Validates hyperstreak updates
@@ -41,7 +41,7 @@ export const onHyperstreakUpdate = functions.firestore
     // Check for valid transitions:
     // 1. Increment by exactly 1 (normal progress)
     // 2. Reset to 0 (activation, crash, or wrong answer)
-    // 3. Value stays within bounds (0-10)
+    // 3. Value stays within bounds (0-5)
     
     const isValidIncrement = afterBar === beforeBar + 1;
     const isValidReset = afterBar === 0;
@@ -108,13 +108,13 @@ export const onHyperstreakActivation = functions.firestore
     if (!wasInHyper && isInHyper) {
       const beforeBar = before?.hyper_bar ?? 0;
       
-      // Hyperstreak should only activate when bar was at max (10)
+      // Hyperstreak should only activate when bar was at max (5)
       // After activation, bar resets to 0
       const isValidActivation = beforeBar >= HYPER_BAR_MAX || beforeBar === 0;
       
       if (!isValidActivation) {
         console.warn(`[ANTI-CHEAT] Invalid hyperstreak activation for user ${uid}`);
-        console.warn(`  Bar was ${beforeBar}, should have been ${HYPER_BAR_MAX}`);
+        console.warn(`  Bar was ${beforeBar}, should have been at least ${HYPER_BAR_MAX}`);
         
         // Revert the activation
         try {

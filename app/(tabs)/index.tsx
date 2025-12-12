@@ -124,6 +124,9 @@ export default function FeedScreen() {
   const [flashVariant, setFlashVariant] = useState<'correct' | 'wrong'>('correct');
   const [show2xBlast, setShow2xBlast] = useState(false);
   const [hyperWinCoins, setHyperWinCoins] = useState(0);
+  
+  // Track pending streak death to show after result animation
+  const [pendingStreakDeath, setPendingStreakDeath] = useState<number | null>(null);
 
   // Peek data for showing vote percentages
   interface PeekData {
@@ -243,10 +246,8 @@ export default function FeedScreen() {
     // Check for streak death (loss aversion trigger)
     const lostStreak = result && !result.won && result.previousStreak > 0;
     if (lostStreak) {
-      // User lost with an active streak - trigger death modal after animation
-      setTimeout(() => {
-        handleStreakDeath(result.previousStreak);
-      }, 4000); // Show after celebration completes
+      // Store the lost streak to show death modal after result animation completes
+      setPendingStreakDeath(result.previousStreak);
     }
     
     // Check for mystery chest after vote
@@ -274,11 +275,20 @@ export default function FeedScreen() {
     setHyperWinCoins(0);
     resetVote();
 
+    // Check if we have a pending streak death to show
+    if (pendingStreakDeath !== null) {
+      // Trigger the streak death modal immediately
+      handleStreakDeath(pendingStreakDeath);
+      setPendingStreakDeath(null);
+      // Don't advance to next question - death modal will handle that on close
+      return;
+    }
+
     // Don't advance to next question if chest is about to show
     if (!showChest) {
       nextQuestion();
     }
-  }, [resetVote, nextQuestion, showChest]);
+  }, [resetVote, nextQuestion, showChest, pendingStreakDeath, handleStreakDeath]);
   
   // Handle hyperstreak activation complete
   const handleHyperActivationComplete = useCallback(() => {
@@ -310,8 +320,10 @@ export default function FeedScreen() {
       // Consume the streak freeze power-up
       useStreakFreezeItem();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Advance to next question after modal closes
+      nextQuestion();
     }
-  }, [useStreakFreeze, useStreakFreezeItem]);
+  }, [useStreakFreeze, useStreakFreezeItem, nextQuestion]);
 
   // Handle reviving with ad (no freeze consumed)
   const handleReviveWithAd = useCallback(async () => {
@@ -320,8 +332,10 @@ export default function FeedScreen() {
     const success = await reviveWithAd();
     if (success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Advance to next question after modal closes
+      nextQuestion();
     }
-  }, [reviveWithAd]);
+  }, [reviveWithAd, nextQuestion]);
 
   // Handle reviving with share (viral growth hack)
   const handleReviveWithShare = useCallback(async () => {
@@ -330,14 +344,25 @@ export default function FeedScreen() {
     const success = await reviveWithShare();
     if (success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Advance to next question after modal closes
+      nextQuestion();
     }
-  }, [reviveWithShare]);
+  }, [reviveWithShare, nextQuestion]);
 
   // Handle accepting streak death
   const handleAcceptStreakDeath = useCallback(async () => {
     await acceptStreakDeath();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-  }, [acceptStreakDeath]);
+    // Advance to next question after modal closes
+    nextQuestion();
+  }, [acceptStreakDeath, nextQuestion]);
+  
+  // Handle closing death modal (user dismissed without action)
+  const handleCloseDeathModal = useCallback(() => {
+    closeDeathModal();
+    // Still advance to next question
+    nextQuestion();
+  }, [closeDeathModal, nextQuestion]);
 
   const handleRefresh = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -658,7 +683,7 @@ export default function FeedScreen() {
           onWatchAd={handleReviveWithAd}
           onShareRevive={handleReviveWithShare}
           onAcceptDeath={handleAcceptStreakDeath}
-          onClose={closeDeathModal}
+          onClose={handleCloseDeathModal}
         />
 
         {/* Level Up Celebration Modal */}
