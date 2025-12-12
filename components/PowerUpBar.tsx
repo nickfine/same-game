@@ -9,6 +9,7 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { POWER_UP_COSTS, COLORS } from '../lib/constants';
+import { DuotoneEye, DuotoneSkip, DuotoneDice } from './icons';
 
 interface PowerUps {
   peek: number;
@@ -26,10 +27,11 @@ interface PowerUpBarProps {
   onUseSkip: () => void;
   onUseDoubleDown: () => void;
   disabled?: boolean;
+  hidden?: boolean;
 }
 
 interface PowerUpButtonProps {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   count: number;
   cost: number;
@@ -85,13 +87,15 @@ function PowerUpButton({
       <Animated.View 
         style={[
           styles.powerUpButton,
-          isActive && { backgroundColor: color + '40', borderColor: color },
+          isActive && { backgroundColor: `${color}30`, borderColor: color },
           isDisabled && !isActive && styles.powerUpButtonDisabled,
           animatedStyle,
         ]}
       >
         {/* Icon */}
-        <Text style={styles.powerUpIcon}>{icon}</Text>
+        <View style={styles.iconContainer}>
+          {icon}
+        </View>
         
         {/* Label */}
         <Text style={[
@@ -144,13 +148,20 @@ export function PowerUpBar({
   onUseSkip,
   onUseDoubleDown,
   disabled = false,
+  hidden = false,
 }: PowerUpBarProps) {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, hidden && styles.hidden]}>
       <View style={styles.powerUpsRow}>
         {/* Peek */}
         <PowerUpButton
-          icon="👁️"
+          icon={
+            <DuotoneEye 
+              size={28} 
+              primaryColor={peekActive ? COLORS.accent : COLORS.primary}
+              accentColor={COLORS.secondary}
+            />
+          }
           label="Peek"
           count={powerUps.peek}
           cost={POWER_UP_COSTS.PEEK}
@@ -158,24 +169,36 @@ export function PowerUpBar({
           isActive={peekActive}
           onPress={onUsePeek}
           disabled={disabled || peekActive}
-          color="#10B981"
+          color={COLORS.accent}
         />
 
         {/* Skip */}
         <PowerUpButton
-          icon="⏭️"
+          icon={
+            <DuotoneSkip 
+              size={28} 
+              primaryColor={COLORS.primary}
+              accentColor={COLORS.secondary}
+            />
+          }
           label="Skip"
           count={powerUps.skip}
           cost={POWER_UP_COSTS.SKIP}
           userScore={userScore}
           onPress={onUseSkip}
           disabled={disabled}
-          color="#6366F1"
+          color={COLORS.primary}
         />
 
         {/* Double Down */}
         <PowerUpButton
-          icon="🎲"
+          icon={
+            <DuotoneDice 
+              size={28} 
+              primaryColor={doubleDownActive ? COLORS.secondary : COLORS.primary}
+              accentColor={COLORS.secondary}
+            />
+          }
           label="2x"
           count={powerUps.doubleDown}
           cost={POWER_UP_COSTS.DOUBLE_DOWN}
@@ -183,7 +206,7 @@ export function PowerUpBar({
           isActive={doubleDownActive}
           onPress={onUseDoubleDown}
           disabled={disabled || doubleDownActive}
-          color="#EC4899"
+          color={COLORS.secondary}
         />
       </View>
 
@@ -191,12 +214,12 @@ export function PowerUpBar({
       {(peekActive || doubleDownActive) && (
         <View style={styles.activeWarning}>
           {peekActive && (
-            <Text style={styles.activeWarningText}>
+            <Text style={[styles.activeWarningText, { color: COLORS.accent }]}>
               👁️ Peek active - vote to reveal majority!
             </Text>
           )}
           {doubleDownActive && (
-            <Text style={[styles.activeWarningText, { color: '#EC4899' }]}>
+            <Text style={[styles.activeWarningText, { color: COLORS.secondary }]}>
               🎲 Double Down active - 2x points on next vote!
             </Text>
           )}
@@ -211,6 +234,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
+  hidden: {
+    opacity: 0,
+    pointerEvents: 'none',
+  },
   powerUpsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -219,27 +246,25 @@ const styles = StyleSheet.create({
   powerUpButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    backgroundColor: COLORS.surface,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 16,
     minWidth: 70,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: COLORS.glassBorder,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
     position: 'relative',
   },
   powerUpButtonDisabled: {
     opacity: 0.5,
-    backgroundColor: 'rgba(255,255,255,0.7)',
   },
-  powerUpIcon: {
-    fontSize: 24,
-    marginBottom: 2,
+  iconContainer: {
+    marginBottom: 4,
   },
   powerUpLabel: {
     fontSize: 11,
@@ -247,7 +272,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   textDisabled: {
-    color: COLORS.mutedLight,
+    color: COLORS.textMuted,
   },
   countBadge: {
     position: 'absolute',
@@ -275,7 +300,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   costBadgeDisabled: {
-    backgroundColor: '#DC2626',
+    backgroundColor: COLORS.destructive,
   },
   costText: {
     fontSize: 9,
@@ -304,10 +329,5 @@ const styles = StyleSheet.create({
   activeWarningText: {
     fontSize: 12,
     fontFamily: 'Poppins_500Medium',
-    color: '#10B981',
   },
 });
-
-
-
-

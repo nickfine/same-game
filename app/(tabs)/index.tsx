@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -11,6 +12,7 @@ import { useVote } from '../../hooks/useVote';
 import { useAchievements } from '../../hooks/useAchievements';
 import { useDopamineFeatures } from '../../hooks/useDopamineFeatures';
 import { useStreakManager } from '../../hooks/useStreakManager';
+import { useLeaderboard } from '../../hooks/useLeaderboard';
 import { useComplianceContext } from '../../components/ComplianceProvider';
 import { AppHeader } from '../../components/AppHeader';
 import { UserMenu } from '../../components/UserMenu';
@@ -19,13 +21,16 @@ import { VoteButtons } from '../../components/VoteButtons';
 import { AchievementToast } from '../../components/AchievementToast';
 import { MysteryChest } from '../../components/MysteryChest';
 import { DailySpinWheel } from '../../components/DailySpinWheel';
-import { ComboMultiplier } from '../../components/ComboMultiplier';
+import { StreakStrip } from '../../components/StreakStrip';
 import { StreakDeathModal } from '../../components/StreakDeathModal';
 import { PowerUpBar } from '../../components/PowerUpBar';
-import { ResultCelebration } from '../../components/ResultCelebration';
 import { LevelUpModal } from '../../components/LevelUpModal';
+import { ResultReveal } from '../../components/ResultReveal';
+import { ConfettiCannon } from '../../components/ConfettiCannon';
+import { ScreenFlash } from '../../components/ScreenFlash';
 import { calculateLevel } from '../../lib/levels';
 import { deductUserScore, addUserScore } from '../../lib/firestore';
+import { COLORS, GRADIENTS } from '../../lib/constants';
 import type { VoteChoice } from '../../types';
 import type { Reward } from '../../lib/rewards';
 
@@ -42,6 +47,7 @@ export default function FeedScreen() {
   
   const { vote, result: voteResult, loading: voteLoading, reset: resetVote, error: voteError } = useVote();
   const { newlyUnlocked, clearNewlyUnlocked } = useAchievements(uid, user);
+  const { userRank } = useLeaderboard(uid);
   const { canVote, remainingVotes, showDailyVoteLimitModal, isMinor } = useComplianceContext();
   
   // Dopamine features
@@ -84,10 +90,14 @@ export default function FeedScreen() {
   const [showingResult, setShowingResult] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
-  const [comboActive, setComboActive] = useState(false);
   const [userChoice, setUserChoice] = useState<'a' | 'b' | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [pendingChestReward, setPendingChestReward] = useState<Reward | null>(null);
+
+  // Visual feedback states
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [showFlash, setShowFlash] = useState(false);
+  const [flashVariant, setFlashVariant] = useState<'correct' | 'wrong'>('correct');
 
   // Peek data for showing vote percentages
   interface PeekData {
@@ -159,20 +169,28 @@ export default function FeedScreen() {
     
     setUserChoice(choice);
     setShowingResult(true);
-    setComboActive(true); // Activate combo timer
     const result = await vote(uid, currentQuestion.id, choice);
     
     // Check if vote failed due to daily limit
     if (!result && voteError === 'DAILY_LIMIT_REACHED') {
       setShowingResult(false);
       setUserChoice(null);
-      setComboActive(false);
       showDailyVoteLimitModal();
       return;
     }
     
-    // Show the celebration screen!
+    // Trigger visual feedback
     if (result) {
+      setFlashVariant(result.won ? 'correct' : 'wrong');
+      setShowFlash(true);
+      
+      if (result.won) {
+        setShowConfetti(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+      
       setShowCelebration(true);
     }
     
@@ -195,23 +213,15 @@ export default function FeedScreen() {
     setPeekData(null);
   }, [uid, currentQuestion, vote, voteLoading, showingResult, canVote, showDailyVoteLimitModal, voteError, user, onVoteComplete, handleStreakDeath, clearActiveEffects]);
 
-  const handleAnimationComplete = useCallback(() => {
-    resetVote();
-    setShowingResult(false);
-      setUserChoice(null);
-    // Don't advance to next question if chest is about to show
-    if (!showChest) {
-      nextQuestion();
-    }
-  }, [resetVote, nextQuestion, showChest]);
-
   // Handle celebration complete
   const handleCelebrationComplete = useCallback(() => {
     setShowCelebration(false);
     setShowingResult(false);
     setUserChoice(null);
+    setShowConfetti(false);
+    setShowFlash(false);
     resetVote();
-    
+
     // Don't advance to next question if chest is about to show
     if (!showChest) {
       nextQuestion();
@@ -222,7 +232,6 @@ export default function FeedScreen() {
   const handleChestReward = useCallback((reward: Reward) => {
     if (user) {
       onChestClaimed(reward, user.votes_cast);
-      // TODO: Apply points reward to user score if reward.type === 'points'
     }
     nextQuestion();
   }, [user, onChestClaimed, nextQuestion]);
@@ -230,13 +239,7 @@ export default function FeedScreen() {
   // Handle spin reward claimed  
   const handleSpinReward = useCallback((reward: Reward) => {
     onSpinClaimed(reward);
-    // TODO: Apply points reward to user score if reward.type === 'points'
   }, [onSpinClaimed]);
-
-  // Handle combo expired
-  const handleComboExpired = useCallback(() => {
-    setComboActive(false);
-  }, []);
 
   // Handle using a streak freeze
   const handleUseStreakFreeze = useCallback(async () => {
@@ -344,302 +347,364 @@ export default function FeedScreen() {
   // Loading state
   if (questionsLoading && !currentQuestion) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f4f5', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#18181b" />
-        <Text 
-          style={{ 
-            marginTop: 16, 
-            color: '#18181b', 
-            fontSize: 18,
-            fontFamily: 'Righteous_400Regular',
-          }}
-        >
-          Loading...
-        </Text>
-      </SafeAreaView>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={GRADIENTS.background}
+          style={StyleSheet.absoluteFill}
+        />
+        <SafeAreaView style={styles.centerContent}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </SafeAreaView>
+      </View>
     );
   }
 
   // Error state
   if (questionsError) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f4f5', justifyContent: 'center', alignItems: 'center', padding: 32 }}>
-        <Text 
-          style={{ 
-            color: '#FF0055', 
-            fontSize: 24, 
-            textAlign: 'center', 
-            marginBottom: 16,
-            fontFamily: 'Righteous_400Regular',
-          }}
-        >
-          Oops!
-        </Text>
-        <Text style={{ color: '#71717a', textAlign: 'center', marginBottom: 24, fontFamily: 'Poppins_400Regular' }}>
-          {questionsError}
-        </Text>
-        <Pressable 
-          onPress={handleRefresh}
-          style={{
-            backgroundColor: '#18181b',
-            paddingHorizontal: 24,
-            paddingVertical: 12,
-            borderRadius: 12,
-          }}
-        >
-          <Text 
-            style={{ 
-              color: '#ffffff', 
-              fontSize: 18,
-              fontFamily: 'Righteous_400Regular',
-            }}
-          >
-            Try Again
-          </Text>
-        </Pressable>
-      </SafeAreaView>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={GRADIENTS.background}
+          style={StyleSheet.absoluteFill}
+        />
+        <SafeAreaView style={styles.centerContent}>
+          <Text style={styles.errorTitle}>Oops!</Text>
+          <Text style={styles.errorMessage}>{questionsError}</Text>
+          <Pressable onPress={handleRefresh} style={styles.retryButton}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </Pressable>
+        </SafeAreaView>
+      </View>
     );
   }
 
   // No more questions
   if (!currentQuestion && !hasMoreQuestions) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f4f5' }}>
-        <AppHeader 
+      <View style={styles.container}>
+        <LinearGradient
+          colors={GRADIENTS.background}
+          style={StyleSheet.absoluteFill}
+        />
+        <SafeAreaView style={{ flex: 1 }}>
+          <AppHeader
+            score={user?.score ?? 0}
+            level={user?.level ?? calculateLevel(user?.xp ?? 0)}
+            xp={user?.xp ?? 0}
+            streak={user?.current_streak ?? 0}
+            rank={userRank}
+            onMenuPress={handleMenuOpen}
+            onLevelPress={handleLevelPress}
+          />
+          
+          <View style={styles.centerContent}>
+            <Animated.View entering={FadeIn.duration(300)}>
+              <Text style={styles.emptyTitle}>All caught up!</Text>
+              <Text style={styles.emptyMessage}>
+                You've answered all available questions.{'\n'}Open the menu to create your own!
+              </Text>
+              
+              <Pressable onPress={handleRefresh} style={styles.checkButton}>
+                <Text style={styles.checkButtonText}>Check for new questions</Text>
+              </Pressable>
+            </Animated.View>
+          </View>
+
+          <UserMenu 
+            visible={menuVisible}
+            onClose={handleMenuClose}
+            score={user?.score ?? 0}
+            questionsCreated={user?.questions_created ?? 0}
+          />
+        </SafeAreaView>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      {/* Dark gradient background */}
+      <LinearGradient
+        colors={GRADIENTS.background}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <SafeAreaView style={{ flex: 1 }}>
+        {/* App Header with glassmorphism */}
+        <AppHeader
           score={user?.score ?? 0}
           level={user?.level ?? calculateLevel(user?.xp ?? 0)}
           xp={user?.xp ?? 0}
+          streak={user?.current_streak ?? 0}
+          rank={userRank}
           onMenuPress={handleMenuOpen}
           onLevelPress={handleLevelPress}
         />
-        
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
-          <Animated.View entering={FadeIn.duration(300)}>
-            <Text 
-              style={{ 
-                fontSize: 36, 
-                color: '#18181b', 
-                textAlign: 'center', 
-                marginBottom: 16,
-                fontFamily: 'Righteous_400Regular',
-              }}
-            >
-              All caught up!
-            </Text>
-            <Text 
-              style={{ 
-                color: '#71717a', 
-                textAlign: 'center', 
-                fontSize: 16, 
-                marginBottom: 32,
-                fontFamily: 'Poppins_400Regular',
-                lineHeight: 24,
-              }}
-            >
-              You've answered all available questions.{'\n'}Open the menu to create your own!
-            </Text>
-            
-            <Pressable 
-              onPress={handleRefresh}
-              style={{
-                backgroundColor: '#e4e4e7',
-                paddingHorizontal: 24,
-                paddingVertical: 12,
-                borderRadius: 12,
-              }}
-            >
-              <Text 
-                style={{ 
-                  color: '#18181b', 
-                  textAlign: 'center', 
-                  fontSize: 16,
-                  fontFamily: 'Righteous_400Regular',
-                }}
-              >
-                Check for new questions
-              </Text>
-            </Pressable>
-          </Animated.View>
+
+        {/* Daily Spin Button - Shows when spin is available */}
+        {canSpin && (
+          <Pressable onPress={openDailySpin} style={styles.spinButton}>
+            <Text style={styles.spinEmoji}>🎰</Text>
+            <Text style={styles.spinText}>SPIN!</Text>
+          </Pressable>
+        )}
+
+        {/* Streak Strip */}
+        <View style={styles.streakContainer}>
+          <StreakStrip
+            currentStreak={user?.current_streak ?? 0}
+            bestStreak={user?.best_streak ?? 0}
+          />
         </View>
 
+        {/* Active Multiplier Indicator */}
+        {activeMultiplier > 1 && (
+          <View style={styles.multiplierBadge}>
+            <Text style={styles.multiplierText}>🚀 {activeMultiplier}x</Text>
+          </View>
+        )}
+
+        {/* Main Content Area */}
+        <View style={styles.mainContent}>
+          {/* Card Container - holds both question and result in same position */}
+          <View style={styles.cardContainer}>
+            {/* Question Card - Always visible underneath */}
+            {currentQuestion && (
+              <QuestionCard 
+                key={currentQuestion.id}
+                question={currentQuestion}
+                voteResult={voteResult}
+                peekData={peekData}
+                doubleDownActive={doubleDownActive}
+              />
+            )}
+            
+            {/* Result Reveal - Overlays directly on top of question card */}
+            {currentQuestion && showingResult && voteResult && (
+              <ResultReveal
+                visible={showingResult}
+                question={currentQuestion}
+                result={voteResult}
+                onComplete={handleCelebrationComplete}
+              />
+            )}
+          </View>
+        </View>
+
+        {/* Power-Up Bar */}
+        {currentQuestion && (
+          <PowerUpBar
+            powerUps={powerUps}
+            userScore={user?.score ?? 0}
+            doubleDownActive={doubleDownActive}
+            peekActive={peekActive}
+            onUsePeek={handleUsePeek}
+            onUseSkip={handleUseSkip}
+            onUseDoubleDown={handleUseDoubleDown}
+            disabled={voteLoading}
+            hidden={showingResult}
+          />
+        )}
+
+        {/* Vote Buttons - Stacked vertically */}
+        {currentQuestion && (
+          <VoteButtons
+            optionA={currentQuestion.option_a}
+            optionB={currentQuestion.option_b}
+            onVote={handleVote}
+            disabled={voteLoading || showingResult}
+            hidden={showingResult}
+          />
+        )}
+
+        {/* User Menu */}
         <UserMenu 
           visible={menuVisible}
           onClose={handleMenuClose}
           score={user?.score ?? 0}
           questionsCreated={user?.questions_created ?? 0}
         />
-      </SafeAreaView>
-    );
-  }
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f4f5' }}>
-      {/* App Header */}
-      <AppHeader 
-        score={user?.score ?? 0} 
-        onMenuPress={handleMenuOpen}
-      />
-
-      {/* Daily Spin Button - Shows when spin is available */}
-      {canSpin && (
-        <Pressable
-          onPress={openDailySpin}
-          style={{
-            position: 'absolute',
-            top: 60,
-            right: 16,
-            backgroundColor: '#F59E0B',
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderRadius: 20,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-            shadowColor: '#F59E0B',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.4,
-            shadowRadius: 8,
-            zIndex: 10,
-          }}
-        >
-          <Text style={{ fontSize: 16 }}>🎰</Text>
-          <Text style={{ 
-            color: '#fff', 
-            fontSize: 12, 
-            fontFamily: 'Righteous_400Regular',
-          }}>
-            SPIN!
-          </Text>
-        </Pressable>
-      )}
-
-      {/* Combo Multiplier Bar */}
-      {(user?.current_streak ?? 0) >= 1 && (
-        <View style={{ 
-          position: 'absolute', 
-          top: 100, 
-          left: 0, 
-          right: 0,
-          zIndex: 5,
-        }}>
-          <ComboMultiplier
-            streak={user?.current_streak ?? 0}
-            isActive={comboActive}
-            onComboExpired={handleComboExpired}
-          />
-        </View>
-      )}
-
-      {/* Active Multiplier Indicator */}
-      {activeMultiplier > 1 && (
-        <View style={{
-          position: 'absolute',
-          top: 60,
-          left: 16,
-          backgroundColor: '#8B5CF6',
-          paddingHorizontal: 12,
-          paddingVertical: 6,
-          borderRadius: 16,
-          zIndex: 10,
-        }}>
-          <Text style={{ 
-            color: '#fff', 
-            fontSize: 14, 
-            fontFamily: 'Righteous_400Regular',
-          }}>
-            🚀 {activeMultiplier}x
-          </Text>
-        </View>
-      )}
-
-      {/* Main Content Area */}
-      <View style={{ flex: 1, justifyContent: 'center' }}>
-        {/* Question Card */}
-        {currentQuestion && (
-          <QuestionCard 
-            key={currentQuestion.id}
-            question={currentQuestion}
-            voteResult={voteResult}
-            peekData={peekData}
-            doubleDownActive={doubleDownActive}
-            onAnimationComplete={handleAnimationComplete}
+        {/* Achievement Toast */}
+        {newlyUnlocked.length > 0 && (
+          <AchievementToast
+            key={newlyUnlocked[currentAchievementIndex].id}
+            achievement={newlyUnlocked[currentAchievementIndex]}
+            onDismiss={handleAchievementDismiss}
           />
         )}
-      </View>
 
-      {/* Power-Up Bar */}
-      {currentQuestion && !showingResult && (
-        <PowerUpBar
-          powerUps={powerUps}
-          userScore={user?.score ?? 0}
-          doubleDownActive={doubleDownActive}
-          peekActive={peekActive}
-          onUsePeek={handleUsePeek}
-          onUseSkip={handleUseSkip}
-          onUseDoubleDown={handleUseDoubleDown}
-          disabled={voteLoading}
+        {/* Mystery Chest Modal */}
+        <MysteryChest
+          visible={showChest}
+          onClose={closeChest}
+          onRewardClaimed={handleChestReward}
         />
-      )}
 
-      {/* Vote Buttons - Fixed at bottom */}
-      {currentQuestion && (
-        <VoteButtons
-          optionA={currentQuestion.option_a}
-          optionB={currentQuestion.option_b}
-          onVote={handleVote}
-          disabled={voteLoading || showingResult}
-          hidden={showingResult}
+        {/* Daily Spin Wheel Modal */}
+        <DailySpinWheel
+          visible={showSpin}
+          onClose={closeSpin}
+          onRewardClaimed={handleSpinReward}
         />
-      )}
 
-      {/* User Menu */}
-      <UserMenu 
-        visible={menuVisible}
-        onClose={handleMenuClose}
-        score={user?.score ?? 0}
-        questionsCreated={user?.questions_created ?? 0}
-      />
-
-      {/* Achievement Toast */}
-      {newlyUnlocked.length > 0 && (
-        <AchievementToast
-          key={newlyUnlocked[currentAchievementIndex].id}
-          achievement={newlyUnlocked[currentAchievementIndex]}
-          onDismiss={handleAchievementDismiss}
+        {/* Streak Death Modal (Loss Aversion) */}
+        <StreakDeathModal
+          visible={showDeathModal}
+          deadStreak={deadStreak}
+          hasStreakFreeze={hasStreakFreeze}
+          onUseFreeze={handleUseStreakFreeze}
+          onAcceptDeath={handleAcceptStreakDeath}
+          onClose={closeDeathModal}
         />
-      )}
 
-      {/* Mystery Chest Modal */}
-      <MysteryChest
-        visible={showChest}
-        onClose={closeChest}
-        onRewardClaimed={handleChestReward}
+        {/* Level Up Celebration Modal */}
+        <LevelUpModal
+          visible={showLevelUpModal}
+          newLevel={newLevelToShow}
+          onClose={handleLevelUpClose}
+        />
+      </SafeAreaView>
+
+      {/* Visual Feedback Overlays */}
+      <ScreenFlash 
+        visible={showFlash} 
+        variant={flashVariant}
+        onComplete={() => setShowFlash(false)}
       />
-
-      {/* Daily Spin Wheel Modal */}
-      <DailySpinWheel
-        visible={showSpin}
-        onClose={closeSpin}
-        onRewardClaimed={handleSpinReward}
+      <ConfettiCannon 
+        shoot={showConfetti}
+        variant="correct"
+        onComplete={() => setShowConfetti(false)}
       />
-
-      {/* Streak Death Modal (Loss Aversion) */}
-      <StreakDeathModal
-        visible={showDeathModal}
-        deadStreak={deadStreak}
-        hasStreakFreeze={hasStreakFreeze}
-        onUseFreeze={handleUseStreakFreeze}
-        onAcceptDeath={handleAcceptStreakDeath}
-        onClose={closeDeathModal}
-      />
-
-      {/* Level Up Celebration Modal */}
-      <LevelUpModal
-        visible={showLevelUpModal}
-        newLevel={newLevelToShow}
-        onClose={handleLevelUpClose}
-      />
-
-    </SafeAreaView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  loadingText: {
+    marginTop: 16,
+    color: COLORS.text,
+    fontSize: 18,
+    fontFamily: 'Righteous_400Regular',
+  },
+  errorTitle: {
+    color: COLORS.secondary,
+    fontSize: 32,
+    textAlign: 'center',
+    marginBottom: 16,
+    fontFamily: 'Righteous_400Regular',
+  },
+  errorMessage: {
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginBottom: 24,
+    fontFamily: 'Poppins_400Regular',
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 16,
+  },
+  retryButtonText: {
+    color: COLORS.primaryForeground,
+    fontSize: 18,
+    fontFamily: 'Righteous_400Regular',
+  },
+  emptyTitle: {
+    fontSize: 36,
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 16,
+    fontFamily: 'Righteous_400Regular',
+  },
+  emptyMessage: {
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    fontSize: 16,
+    marginBottom: 32,
+    fontFamily: 'Poppins_400Regular',
+    lineHeight: 24,
+  },
+  checkButton: {
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder,
+  },
+  checkButtonText: {
+    color: COLORS.text,
+    textAlign: 'center',
+    fontSize: 16,
+    fontFamily: 'Righteous_400Regular',
+  },
+  spinButton: {
+    position: 'absolute',
+    top: 100,
+    right: 16,
+    backgroundColor: COLORS.secondary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    shadowColor: COLORS.secondary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    zIndex: 10,
+  },
+  spinEmoji: {
+    fontSize: 16,
+  },
+  spinText: {
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: 'Righteous_400Regular',
+  },
+  streakContainer: {
+    position: 'absolute',
+    top: 100,
+    left: 0,
+    right: 0,
+    zIndex: 5,
+  },
+  multiplierBadge: {
+    position: 'absolute',
+    top: 100,
+    left: 16,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    zIndex: 10,
+  },
+  multiplierText: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: 'Righteous_400Regular',
+  },
+  mainContent: {
+    flex: 1,
+    justifyContent: 'center',
+    marginTop: 80,
+  },
+  cardContainer: {
+    position: 'relative',
+  },
+});

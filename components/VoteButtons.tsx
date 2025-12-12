@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { 
   useAnimatedStyle, 
   withSpring,
   useSharedValue,
-  FadeOut,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { playSoundGlobal } from '../hooks/useSound';
+import { COLORS, GRADIENTS } from '../lib/constants';
 import type { VoteChoice } from '../types';
 
 interface VoteButtonsProps {
@@ -35,9 +36,9 @@ export function VoteButtons({ optionA, optionB, onVote, disabled, hidden }: Vote
 
   const handlePressOut = (option: 'a' | 'b') => {
     if (option === 'a') {
-      scaleA.value = withSpring(1, { damping: 15 });
+      scaleA.value = withSpring(1.0, { damping: 15 });
     } else {
-      scaleB.value = withSpring(1, { damping: 15 });
+      scaleB.value = withSpring(1.0, { damping: 15 });
     }
   };
 
@@ -56,83 +57,95 @@ export function VoteButtons({ optionA, optionB, onVote, disabled, hidden }: Vote
     transform: [{ scale: scaleB.value }],
   }));
 
-  if (hidden) {
-    return null;
-  }
-
   return (
     <Animated.View 
-      exiting={FadeOut.duration(200)}
-      style={{ 
-        flexDirection: 'row', 
-        height: 120, 
-        marginHorizontal: 16, 
-        marginBottom: 16,
-        gap: 12,
-      }}
+      style={[styles.container, hidden && styles.hidden]}
     >
-      {/* Option A - Left */}
+      {/* Option A - Top Button (Purple Gradient) */}
       <AnimatedPressable
-        style={[
-          animatedStyleA, 
-          { 
-            backgroundColor: '#6366F1',
-            flex: 1,
-            borderRadius: 16,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }
-        ]}
+        style={[animatedStyleA, styles.buttonWrapper]}
         onPressIn={() => handlePressIn('a')}
         onPressOut={() => handlePressOut('a')}
         onPress={() => handlePress('a')}
         disabled={disabled}
       >
-        <Text 
-          style={{ 
-            color: 'white', 
-            fontSize: 20, 
-            fontFamily: 'Poppins_700Bold',
-            textAlign: 'center',
-            paddingHorizontal: 16,
-          }}
-          numberOfLines={2}
+        <LinearGradient
+          colors={GRADIENTS.purple}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.button}
         >
-          {optionA}
-        </Text>
+          <Text 
+            style={styles.buttonText}
+            numberOfLines={2}
+            adjustsFontSizeToFit
+          >
+            {optionA}
+          </Text>
+        </LinearGradient>
       </AnimatedPressable>
 
-      {/* Option B - Right */}
+      {/* Option B - Bottom Button (Coral Gradient) */}
       <AnimatedPressable
-        style={[
-          animatedStyleB, 
-          { 
-            backgroundColor: '#F59E0B',
-            flex: 1,
-            borderRadius: 16,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }
-        ]}
+        style={[animatedStyleB, styles.buttonWrapper]}
         onPressIn={() => handlePressIn('b')}
         onPressOut={() => handlePressOut('b')}
         onPress={() => handlePress('b')}
         disabled={disabled}
       >
-        <Text 
-          style={{ 
-            color: 'white', 
-            fontSize: 20, 
-            fontFamily: 'Poppins_700Bold',
-            textAlign: 'center',
-            paddingHorizontal: 16,
-          }}
-          numberOfLines={2}
+        <LinearGradient
+          colors={GRADIENTS.coral}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.button}
         >
-          {optionB}
-        </Text>
+          <Text 
+            style={styles.buttonText}
+            numberOfLines={2}
+            adjustsFontSizeToFit
+          >
+            {optionB}
+          </Text>
+        </LinearGradient>
       </AnimatedPressable>
     </Animated.View>
   );
 }
 
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'column',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    gap: 12,
+  },
+  hidden: {
+    opacity: 0,
+    pointerEvents: 'none',
+  },
+  buttonWrapper: {
+    borderRadius: 32,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  button: {
+    height: 140,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    borderRadius: 32,
+  },
+  buttonText: {
+    color: COLORS.white,
+    fontSize: 30,
+    fontFamily: 'Poppins_700Bold',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+});

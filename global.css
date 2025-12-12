@@ -2,3 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Brand Gradients */
+  --gradient-purple: linear-gradient(135deg, #8B5CF6, #D946EF);
+  --gradient-coral: linear-gradient(135deg, #FF6B6B, #FF8E53);
+  
+  /* Brand Colors */
+  --color-primary: #6E0CFF;
+  --color-secondary: #FF3B6E;
+  --color-accent: #00FFBD;
+  --color-background: #0F0F1A;
+  --color-surface: #1A0F33;
+  --color-muted: #2A1A4D;
+  
+  /* Glass Effects */
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-background: rgba(26, 15, 51, 0.8);
+}

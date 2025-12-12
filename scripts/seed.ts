@@ -44,76 +44,79 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 // 50 diverse, engaging questions for the SAME game
+// Mix of original questions + spicy group-chat voice rewrites
 const seedQuestions = [
-  // Classic debates
-  { text: "Cats or Dogs?", option_a: "Cats", option_b: "Dogs" },
-  { text: "Pineapple on Pizza?", option_a: "Yes please!", option_b: "Absolutely not" },
-  { text: "Toilet Paper: Over or Under?", option_a: "Over", option_b: "Under" },
-  { text: "Is a hotdog a sandwich?", option_a: "Yes", option_b: "No" },
-  { text: "GIF pronunciation?", option_a: "Jif", option_b: "Gif (hard G)" },
+  // ═══════════════════════════════════════════════════════════════
+  // SPICY QUESTIONS - Cocky group-chat energy
+  // ═══════════════════════════════════════════════════════════════
+  { text: "Rot on the couch or big-screen flex?", option_a: "Streaming", option_b: "Cinema" },
+  { text: "Sugar goblin or salt demon?", option_a: "Sweet", option_b: "Savory" },
+  { text: "Cat overlord or dog simp?", option_a: "Cats", option_b: "Dogs" },
+  { text: "IV drip espresso or leaf water?", option_a: "Coffee", option_b: "Tea" },
+  { text: "Pineapple on pizza: crime or cuisine?", option_a: "Crime", option_b: "Cuisine" },
   
-  // Lifestyle & Personality
-  { text: "Morning or Night Person?", option_a: "Early Bird", option_b: "Night Owl" },
-  { text: "Coffee or Tea?", option_a: "Coffee", option_b: "Tea" },
-  { text: "Friday Night Plans?", option_a: "Go Out", option_b: "Stay In" },
-  { text: "Vacation Style?", option_a: "Beach", option_b: "Mountains" },
-  { text: "How do you recharge?", option_a: "Alone Time", option_b: "With Friends" },
+  { text: "Sunrise supremacy or midnight menace?", option_a: "Morning", option_b: "Night" },
+  { text: "5am gym bro or 2am gremlin?", option_a: "Early Bird", option_b: "Night Owl" },
   
-  // Tech & Gaming
-  { text: "Smartphone Preference?", option_a: "iPhone", option_b: "Android" },
-  { text: "Gaming Platform?", option_a: "Console", option_b: "PC" },
-  { text: "Favorite Social Media?", option_a: "TikTok", option_b: "Instagram" },
-  { text: "Music Streaming?", option_a: "Spotify", option_b: "Apple Music" },
-  { text: "Default Browser?", option_a: "Chrome", option_b: "Safari" },
+  { text: "Fruit phone cult or green bubble peasant?", option_a: "iPhone", option_b: "Android" },
+  { text: "PC master race or console casual?", option_a: "PC", option_b: "Console" },
+  { text: "Touch grass or touch screen?", option_a: "Go Outside", option_b: "Stay Online" },
   
-  // Superpowers
-  { text: "Which superpower?", option_a: "Invisibility", option_b: "Flight" },
-  { text: "Which would you choose?", option_a: "Read Minds", option_b: "Time Travel" },
-  { text: "Better ability?", option_a: "Super Speed", option_b: "Super Strength" },
-  { text: "Would you rather have?", option_a: "Teleportation", option_b: "Telekinesis" },
-  { text: "Pick one:", option_a: "Talk to Animals", option_b: "Speak All Languages" },
+  { text: "Crust is just bread handles. Fight me.", option_a: "Eat it", option_b: "Trash it" },
+  { text: "Cereal is soup. Prove me wrong.", option_a: "Facts", option_b: "Unhinged" },
+  { text: "Hot dog is a taco. There, I said it.", option_a: "Based", option_b: "Seek help" },
+  { text: "Boneless wings are just nuggets for adults", option_a: "Real talk", option_b: "Blasphemy" },
   
-  // Food & Drink
-  { text: "Pizza Crust Style?", option_a: "Thin & Crispy", option_b: "Thick & Fluffy" },
-  { text: "Chocolate Type?", option_a: "Milk Chocolate", option_b: "Dark Chocolate" },
-  { text: "Breakfast Preference?", option_a: "Sweet", option_b: "Savory" },
-  { text: "Sushi Opinion?", option_a: "Love it", option_b: "Not for me" },
-  { text: "Cereal First or Milk First?", option_a: "Cereal First", option_b: "Milk First" },
+  { text: "Reply instantly or let them marinate?", option_a: "Instant", option_b: "Let em wait" },
+  { text: "Read receipts: power move or psycho behavior?", option_a: "Power move", option_b: "Psycho" },
+  { text: "Voice messages: efficient or unhinged?", option_a: "Efficient", option_b: "Unhinged" },
+  { text: "Double text: confident or desperate?", option_a: "Confident", option_b: "Desperate" },
   
-  // Pop Culture
+  { text: "Fly around or disappear on command?", option_a: "Flight", option_b: "Invisibility" },
+  { text: "Read minds or erase memories?", option_a: "Read minds", option_b: "Erase" },
+  { text: "Stop time or travel through it?", option_a: "Stop time", option_b: "Time travel" },
+  
+  { text: "Die Hard is a Christmas movie. PERIOD.", option_a: "Obviously", option_b: "Never" },
+  { text: "The remake was better", option_a: "Sometimes", option_b: "Literally never" },
+  { text: "Spoilers ruin movies or build hype?", option_a: "Ruin", option_b: "Build hype" },
+  
+  { text: "Main character energy or side character peace?", option_a: "Main", option_b: "Side" },
+  { text: "Overshare or bottle it up?", option_a: "Overshare", option_b: "Bottle it" },
+  { text: "Apologize first or die on that hill?", option_a: "Apologize", option_b: "Die on hill" },
+  
+  { text: "Water is wet", option_a: "Facts", option_b: "Water makes things wet" },
+  { text: "GIF or JIF? Choose wisely.", option_a: "GIF (hard G)", option_b: "JIF" },
+  { text: "Toilet paper: over or under?", option_a: "Over", option_b: "Under (psycho)" },
+  
+  { text: "WFH forever or office comeback arc?", option_a: "WFH", option_b: "Office" },
+  { text: "Electric cars or gas guzzler loyalty?", option_a: "Electric", option_b: "Gas" },
+  { text: "AI will save us or doom us all", option_a: "Save", option_b: "Doom" },
+  
+  { text: "More money or more time?", option_a: "Money", option_b: "Time" },
+  { text: "Know when you'll die or how?", option_a: "When", option_b: "How" },
+  { text: "Never eat pizza again or never drink coffee?", option_a: "No pizza", option_b: "No coffee" },
+  
+  { text: "Aliens definitely exist, right?", option_a: "Obviously", option_b: "We're alone" },
+  { text: "Shower thoughts: morning clarity or night therapy?", option_a: "Morning", option_b: "Night" },
+  { text: "Make your bed or embrace the chaos?", option_a: "Make it", option_b: "Chaos" },
+  
+  { text: "Avocado toast is overrated", option_a: "Agree", option_b: "Blocked" },
+  { text: "Oat milk supremacy", option_a: "Yes king", option_b: "Regular milk forever" },
+  { text: "Standing desk: game changer or try-hard?", option_a: "Game changer", option_b: "Try-hard" },
+  
+  { text: "Post the thirst trap or save for the archives?", option_a: "Post it", option_b: "Save it" },
+  { text: "Finsta or keep it real on main?", option_a: "Finsta", option_b: "Main only" },
+  { text: "Stories or posts?", option_a: "Stories", option_b: "Posts" },
+  
+  { text: "First move: you or them?", option_a: "Me", option_b: "Them" },
+  { text: "Date idea: fancy dinner or chaos activity?", option_a: "Fancy", option_b: "Chaos" },
+  { text: "Check their socials before the date?", option_a: "Always", option_b: "Never" },
+  
+  // ═══════════════════════════════════════════════════════════════
+  // CLASSIC QUESTIONS
+  // ═══════════════════════════════════════════════════════════════
   { text: "Star Wars or Star Trek?", option_a: "Star Wars", option_b: "Star Trek" },
   { text: "Marvel or DC?", option_a: "Marvel", option_b: "DC" },
-  { text: "The Office Version?", option_a: "US", option_b: "UK" },
-  { text: "Better Hogwarts House?", option_a: "Gryffindor", option_b: "Slytherin" },
-  { text: "Zombie Apocalypse Weapon?", option_a: "Sword", option_b: "Gun" },
-  
-  // This or That
-  { text: "Summer or Winter?", option_a: "Summer", option_b: "Winter" },
-  { text: "Books or Movies?", option_a: "Books", option_b: "Movies" },
-  { text: "City or Countryside?", option_a: "City Life", option_b: "Countryside" },
-  { text: "Text or Call?", option_a: "Text", option_b: "Call" },
-  { text: "Sweet or Salty Snacks?", option_a: "Sweet", option_b: "Salty" },
-  
-  // Life Choices
-  { text: "What matters more?", option_a: "More Money", option_b: "More Time" },
-  { text: "Would you rather?", option_a: "Know the Future", option_b: "Change the Past" },
-  { text: "Better problem?", option_a: "Too Hot", option_b: "Too Cold" },
-  { text: "Worse to lose?", option_a: "Phone for a Week", option_b: "Wallet for a Day" },
-  { text: "Pick your poison:", option_a: "No Music Ever", option_b: "No Movies Ever" },
-  
-  // Random Fun
-  { text: "Aliens exist?", option_a: "Definitely", option_b: "No way" },
-  { text: "Shower timing?", option_a: "Morning", option_b: "Night" },
-  { text: "Sleep position?", option_a: "Side", option_b: "Back" },
-  { text: "Burgers or Tacos?", option_a: "Burgers", option_b: "Tacos" },
-  { text: "Ice cream cone or cup?", option_a: "Cone", option_b: "Cup" },
-  
-  // Modern Debates
-  { text: "Remote work or Office?", option_a: "Remote", option_b: "Office" },
-  { text: "Electric or Gas Car?", option_a: "Electric", option_b: "Gas" },
-  { text: "Cash or Card?", option_a: "Cash", option_b: "Card" },
-  { text: "Streaming or Cinema?", option_a: "Streaming", option_b: "Cinema" },
-  { text: "Ebook or Physical Book?", option_a: "Ebook", option_b: "Physical" },
 ];
 
 // Generate random vote counts for seeding (makes it interesting from the start)

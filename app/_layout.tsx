@@ -13,9 +13,14 @@ import {
   Poppins_900Black,
 } from '@expo-google-fonts/poppins';
 import { Righteous_400Regular } from '@expo-google-fonts/righteous';
+import {
+  SpaceGrotesk_500Medium,
+  SpaceGrotesk_700Bold,
+} from '@expo-google-fonts/space-grotesk';
 import { useAuth } from '../hooks/useAuth';
 import { initializeSoundSettings } from '../hooks/useSound';
 import { ComplianceProvider } from '../components/ComplianceProvider';
+import { COLORS } from '../lib/constants';
 import '../global.css';
 
 // Keep splash screen visible while loading
@@ -29,6 +34,8 @@ export default function RootLayout() {
     Poppins_700Bold,
     Poppins_900Black,
     Righteous_400Regular,
+    SpaceGrotesk_500Medium,
+    SpaceGrotesk_700Bold,
   });
 
   const { loading: authLoading, error: authError, user, uid } = useAuth();
@@ -48,20 +55,22 @@ export default function RootLayout() {
 
   if (!appReady) {
     return (
-      <View className="flex-1 bg-background justify-center items-center">
-        <ActivityIndicator size="large" color="#18181b" />
-        <Text className="mt-4 text-text text-lg">Loading...</Text>
+      <View style={{ flex: 1, backgroundColor: COLORS.background, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={{ marginTop: 16, color: COLORS.text, fontSize: 18, fontFamily: 'Righteous_400Regular' }}>
+          Loading...
+        </Text>
       </View>
     );
   }
 
   if (authError) {
     return (
-      <View className="flex-1 bg-background justify-center items-center p-8">
-        <Text className="text-fail text-xl text-center mb-4">
+      <View style={{ flex: 1, backgroundColor: COLORS.background, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+        <Text style={{ color: COLORS.secondary, fontSize: 24, textAlign: 'center', marginBottom: 16, fontFamily: 'Righteous_400Regular' }}>
           Something went wrong
         </Text>
-        <Text className="text-gray-500 text-center">
+        <Text style={{ color: COLORS.textMuted, textAlign: 'center' }}>
           {authError}
         </Text>
       </View>
@@ -71,11 +80,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ComplianceProvider uid={uid} user={user}>
-        <StatusBar style="dark" />
+        <StatusBar style="light" />
         <Stack
           screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: '#f4f4f5' },
+            contentStyle: { backgroundColor: COLORS.background },
             animation: 'fade',
           }}
         >

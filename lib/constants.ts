@@ -31,21 +31,96 @@ export const COMPLIANCE = {
   PLAYTIME_WARNING_THRESHOLD: 0.9, // Show warning at 90% of cap
 } as const;
 
-// Colors (matching tailwind.config.js)
+// ═══════════════════════════════════════════════════════════════
+// BRAND COLORS - Dark Mode Palette
+// ═══════════════════════════════════════════════════════════════
 export const COLORS = {
-  background: '#f4f4f5',
-  text: '#18181b',
-  success: '#00E054',
-  fail: '#FF0055',
-  optionA: '#6366F1', // Indigo
-  optionB: '#F59E0B', // Amber
-  muted: '#71717a',
-  mutedLight: '#a1a1aa',
-  border: '#e4e4e7',
-  white: '#ffffff',
-  warning: '#F59E0B', // Amber for warnings
-  danger: '#DC2626', // Red for limit reached
+  // Primary brand colors
+  primary: '#6E0CFF',           // Electric violet
+  primaryForeground: '#FFFFFF',
+  secondary: '#FF3B6E',         // Hot coral
+  accent: '#00FFBD',            // Emerald (correct answer)
+  destructive: '#FF3B6E',
+  
+  // Backgrounds
+  background: '#0F0F1A',        // Deep space
+  surface: '#1A0F33',           // Surface violet
+  muted: '#2A1A4D',
+  
+  // Text
+  text: '#FFFFFF',
+  textMuted: 'rgba(255, 255, 255, 0.6)',
+  textDim: 'rgba(255, 255, 255, 0.4)',
+  
+  // UI Elements
+  glassBorder: 'rgba(255, 255, 255, 0.1)',
+  glassBackground: 'rgba(26, 15, 51, 0.8)',
+  cardBackground: '#FFFFFF',
+  
+  // Gradient endpoints (for LinearGradient arrays)
+  gradientPurpleStart: '#8B5CF6',
+  gradientPurpleEnd: '#D946EF',
+  gradientCoralStart: '#FF6B6B',
+  gradientCoralEnd: '#FF8E53',
+  
+  // Legacy aliases (for compatibility)
+  success: '#00FFBD',
+  fail: '#FF3B6E',
+  optionA: '#8B5CF6',           // Purple gradient start
+  optionB: '#FF6B6B',           // Coral gradient start
+  border: 'rgba(255, 255, 255, 0.1)',
+  white: '#FFFFFF',
+  warning: '#F59E0B',
+  danger: '#DC2626',
+  mutedLight: 'rgba(255, 255, 255, 0.4)',
 } as const;
+
+// ═══════════════════════════════════════════════════════════════
+// GRADIENTS - For LinearGradient components
+// ═══════════════════════════════════════════════════════════════
+export const GRADIENTS = {
+  purple: ['#8B5CF6', '#D946EF'] as const,    // Top button
+  coral: ['#FF6B6B', '#FF8E53'] as const,     // Bottom button
+  violet: ['#6E0CFF', '#8B5CF6'] as const,    // Primary violet
+  background: ['#0F0F1A', '#1A0F33'] as const, // Radial background
+  gold: ['#FFD700', '#FFA500'] as const,      // Celebration
+  success: ['#00FFBD', '#10B981'] as const,   // Correct answer
+} as const;
+
+// ═══════════════════════════════════════════════════════════════
+// STREAK MILESTONES - Celebration data
+// ═══════════════════════════════════════════════════════════════
+export const STREAK_MILESTONES: Record<number, {
+  title: string;
+  emoji: string;
+  color: string;
+  description: string;
+}> = {
+  3: {
+    title: 'TRIFECTA BABY',
+    emoji: '🔥',
+    color: '#FF6B6B',
+    description: '3 days of fire predictions!',
+  },
+  7: {
+    title: 'WEEK GOD',
+    emoji: '⚡',
+    color: '#8B5CF6',
+    description: 'A whole week of dominance!',
+  },
+  14: {
+    title: 'TWO WEEK TYRANT',
+    emoji: '👑',
+    color: '#FFD700',
+    description: 'Unstoppable for 14 days!',
+  },
+  30: {
+    title: 'LITERALLY PSYCHIC',
+    emoji: '🔮',
+    color: '#D946EF',
+    description: 'You can see the future!',
+  },
+};
 
 // Animation Durations (ms)
 export const ANIMATION = {
@@ -53,6 +128,7 @@ export const ANIMATION = {
   normal: 200,
   slow: 300,
   resultDisplay: 1500, // How long to show vote result
+  easeOutExpo: 600,    // For flash animations
 } as const;
 
 // Level System Constants
@@ -135,11 +211,10 @@ export const MILESTONE_REWARDS: Record<number, 'streak_freeze' | 'peek' | 'doubl
 
 // Level tier colors and names
 export const LEVEL_TIERS = {
-  BRONZE: { min: 1, max: 9, name: 'Bronze', color: '#F97316', bgColor: 'rgba(249, 115, 22, 0.12)' },
-  SILVER: { min: 10, max: 19, name: 'Silver', color: '#94A3B8', bgColor: 'rgba(148, 163, 184, 0.15)' },
-  GOLD: { min: 20, max: 29, name: 'Gold', color: '#FFB800', bgColor: 'rgba(255, 184, 0, 0.15)' },
-  PLATINUM: { min: 30, max: 39, name: 'Platinum', color: '#E0E7FF', bgColor: 'rgba(224, 231, 255, 0.15)' },
-  DIAMOND: { min: 40, max: 49, name: 'Diamond', color: '#00E5FF', bgColor: 'rgba(0, 229, 255, 0.12)' },
-  LEGEND: { min: 50, max: 999, name: 'Legend', color: '#FF3D00', bgColor: 'rgba(255, 61, 0, 0.15)' },
+  BRONZE: { min: 1, max: 9, name: 'Bronze', emoji: '🥉', color: '#F97316', bgColor: 'rgba(249, 115, 22, 0.12)', glowColor: 'rgba(249, 115, 22, 0.4)' },
+  SILVER: { min: 10, max: 19, name: 'Silver', emoji: '🥈', color: '#94A3B8', bgColor: 'rgba(148, 163, 184, 0.15)', glowColor: 'rgba(148, 163, 184, 0.4)' },
+  GOLD: { min: 20, max: 29, name: 'Gold', emoji: '🥇', color: '#FFB800', bgColor: 'rgba(255, 184, 0, 0.15)', glowColor: 'rgba(255, 184, 0, 0.4)' },
+  PLATINUM: { min: 30, max: 39, name: 'Platinum', emoji: '💎', color: '#E0E7FF', bgColor: 'rgba(224, 231, 255, 0.15)', glowColor: 'rgba(224, 231, 255, 0.4)' },
+  DIAMOND: { min: 40, max: 49, name: 'Diamond', emoji: '💠', color: '#00E5FF', bgColor: 'rgba(0, 229, 255, 0.12)', glowColor: 'rgba(0, 229, 255, 0.4)' },
+  LEGEND: { min: 50, max: 999, name: 'Legend', emoji: '🔥', color: '#FF3D00', bgColor: 'rgba(255, 61, 0, 0.15)', glowColor: 'rgba(255, 61, 0, 0.4)' },
 } as const;
-
