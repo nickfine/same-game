@@ -3,6 +3,7 @@ import {
   doc, 
   getDoc, 
   setDoc, 
+  updateDoc,
   query, 
   where, 
   orderBy, 
@@ -204,12 +205,47 @@ export async function getQuestions(
   
   for (const docSnap of questionsSnap.docs) {
     if (!votedQuestionIds.has(docSnap.id) && questions.length < pageSize) {
-      questions.push({ id: docSnap.id, ...docSnap.data() } as Question);
+      questions.push(mapQuestionData(docSnap.id, docSnap.data()));
     }
     newLastDoc = docSnap;
   }
   
   return { questions, lastDoc: newLastDoc };
+}
+
+// Generate default emoji based on option text (for backwards compatibility)
+function getDefaultEmoji(option: string | undefined, position: 'a' | 'b'): string {
+  if (!option) return position === 'a' ? '🟣' : '🟠';
+  
+  const lower = option.toLowerCase();
+  
+  // Common mappings
+  if (lower.includes('morning') || lower.includes('sunrise')) return '🌅';
+  if (lower.includes('night') || lower.includes('evening')) return '🌙';
+  if (lower.includes('coffee')) return '☕';
+  if (lower.includes('tea')) return '🍵';
+  if (lower.includes('cat')) return '🐈';
+  if (lower.includes('dog')) return '🐕';
+  if (lower.includes('pizza')) return '🍕';
+  if (lower.includes('taco')) return '🌮';
+  if (lower.includes('burger')) return '🍔';
+  if (lower.includes('iphone') || lower.includes('apple')) return '🍎';
+  if (lower.includes('android')) return '🤖';
+  if (lower.includes('pc') || lower.includes('computer')) return '🖥️';
+  if (lower.includes('console') || lower.includes('game')) return '🎮';
+  if (lower.includes('streaming')) return '📺';
+  if (lower.includes('cinema') || lower.includes('movie')) return '🎬';
+  if (lower.includes('gym') || lower.includes('workout')) return '💪';
+  if (lower.includes('sleep') || lower.includes('nap')) return '😴';
+  if (lower.includes('money')) return '💰';
+  if (lower.includes('time')) return '⏰';
+  if (lower.includes('beach')) return '🏖️';
+  if (lower.includes('mountain')) return '⛰️';
+  if (lower.includes('yes') || lower.includes('agree')) return '✅';
+  if (lower.includes('no') || lower.includes('disagree')) return '❌';
+  
+  // Fallback based on position
+  return position === 'a' ? '🟣' : '🟠';
 }
 
 // Get today's date as ISO string
@@ -368,11 +404,13 @@ export async function createQuestion(
       throw new Error(`Daily limit reached. You can only create ${DAILY_QUESTION_LIMIT} questions per day.`);
     }
     
-    // Create the question with initial vote
+    // Create the question with initial vote (emoji-first format)
     const question: Omit<Question, 'id'> = {
-      text: input.text,
-      option_a: input.option_a,
-      option_b: input.option_b,
+      optionA: input.optionA,
+      emojiA: input.emojiA,
+      optionB: input.optionB,
+      emojiB: input.emojiB,
+      spicyContext: input.spicyContext,
       votes_a: input.initial_vote === 'a' ? 1 : 0,
       votes_b: input.initial_vote === 'b' ? 1 : 0,
       created_at: serverTimestamp() as Timestamp,
@@ -428,9 +466,10 @@ export async function getVoteHistory(
     const questionSnap = await getDoc(questionRef);
     
     if (questionSnap.exists()) {
+      const data = questionSnap.data();
       history.push({
         vote: { id: voteDoc.id, ...voteData } as Vote,
-        question: { id: questionSnap.id, ...questionSnap.data() } as Question,
+        question: mapQuestionData(questionSnap.id, data),
       });
     }
   }
@@ -451,7 +490,23 @@ export async function getUserQuestions(
   );
   
   const questionsSnap = await getDocs(questionsQuery);
-  return questionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
+  return questionsSnap.docs.map(doc => mapQuestionData(doc.id, doc.data()));
+}
+
+// Helper to map question data from old/new formats
+function mapQuestionData(id: string, data: any): Question {
+  return {
+    id,
+    optionA: data.optionA || data.option_a || 'A',
+    optionB: data.optionB || data.option_b || 'B',
+    emojiA: data.emojiA || getDefaultEmoji(data.optionA || data.option_a, 'a'),
+    emojiB: data.emojiB || getDefaultEmoji(data.optionB || data.option_b, 'b'),
+    spicyContext: data.spicyContext || data.text,
+    votes_a: data.votes_a ?? 0,
+    votes_b: data.votes_b ?? 0,
+    created_at: data.created_at,
+    creator_uid: data.creator_uid,
+  };
 }
 
 // Check if user has voted on a question

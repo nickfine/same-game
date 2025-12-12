@@ -17,6 +17,7 @@ interface ShareCardProps {
   visible: boolean;
   streak: number;
   correctCount: number;
+  spicyContext?: string; // Optional context from question
   onClose: () => void;
 }
 
@@ -32,7 +33,7 @@ const SHARE_QUOTES = [
   "The people have spoken (through me)",
 ];
 
-export function ShareCard({ visible, streak, correctCount, onClose }: ShareCardProps) {
+export function ShareCard({ visible, streak, correctCount, spicyContext, onClose }: ShareCardProps) {
   const viewShotRef = useRef<ViewShot>(null);
   const cardScale = useSharedValue(0.8);
   const cardOpacity = useSharedValue(0);
@@ -127,6 +128,9 @@ export function ShareCard({ visible, streak, correctCount, onClose }: ShareCardP
               {/* Quote */}
               <View style={styles.quoteContainer}>
                 <Text style={styles.quote}>"{quote}"</Text>
+                {spicyContext && (
+                  <Text style={styles.spicyContext}>#{spicyContext.replace(/\s+/g, '')}</Text>
+                )}
               </View>
 
               {/* Footer */}
@@ -239,6 +243,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
+  spicyContext: {
+    fontSize: 12,
+    fontFamily: 'Poppins_500Medium',
+    color: COLORS.primary,
+    textAlign: 'center',
+    marginTop: 8,
+    letterSpacing: 1,
+  },
   footer: {
     alignItems: 'center',
   },
@@ -280,5 +292,6 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
 });
+
 
 

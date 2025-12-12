@@ -15,10 +15,12 @@ export function ShareButton({ question, result, style }: ShareButtonProps) {
 
     const resultEmoji = result.won ? '✅' : '❌';
     const resultText = result.won ? 'SAME!' : 'NOPE';
-    const myChoice = result.choice === 'a' ? question.option_a : question.option_b;
+    const myChoice = result.choice === 'a' ? question.optionA : question.optionB;
+    const myEmoji = result.choice === 'a' ? question.emojiA : question.emojiB;
     const myPercentage = result.choice === 'a' ? result.percentage_a : result.percentage_b;
+    const contextTag = question.spicyContext ? `\n#${question.spicyContext.replace(/\s+/g, '')}` : '';
 
-    const message = `${resultEmoji} ${resultText}\n\n"${question.text}"\n\nI picked: ${myChoice} (${myPercentage}%)\n\n${question.option_a}: ${result.percentage_a}%\n${question.option_b}: ${result.percentage_b}%\n\nPlay SAME and predict what the majority thinks! 🎮`;
+    const message = `${resultEmoji} ${resultText}\n\n${question.emojiA} ${question.optionA} vs ${question.emojiB} ${question.optionB}\n\nI picked: ${myEmoji} ${myChoice} (${myPercentage}%)\n\n${question.emojiA} ${question.optionA}: ${result.percentage_a}%\n${question.emojiB} ${question.optionB}: ${result.percentage_b}%${contextTag}\n\nPlay SAME and predict what the majority thinks! 🎮`;
 
     try {
       await Share.share({

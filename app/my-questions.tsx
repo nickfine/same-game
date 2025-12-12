@@ -29,17 +29,12 @@ function QuestionItem({ question, index }: QuestionItemProps) {
         marginBottom: 12,
       }}
     >
-      {/* Question */}
-      <Text 
-        style={{ 
-          fontFamily: 'Poppins_700Bold',
-          fontSize: 18,
-          color: '#18181b',
-          marginBottom: 12,
-        }}
-      >
-        {question.text}
-      </Text>
+      {/* Question - Emoji + Option display */}
+      <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+        <Text style={{ fontSize: 32 }}>{question.emojiA}</Text>
+        <Text style={{ fontFamily: 'Poppins_700Bold', fontSize: 16, color: '#71717a' }}>vs</Text>
+        <Text style={{ fontSize: 32 }}>{question.emojiB}</Text>
+      </View>
 
       {/* Options with Vote Counts */}
       <View style={{ gap: 8 }}>
@@ -47,7 +42,7 @@ function QuestionItem({ question, index }: QuestionItemProps) {
         <View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
             <Text style={{ fontFamily: 'Poppins_700Bold', fontSize: 14, color: '#6366F1' }}>
-              {question.option_a}
+              {question.emojiA} {question.optionA}
             </Text>
             <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 14, color: '#71717a' }}>
               {question.votes_a} votes ({percentageA}%)
@@ -69,7 +64,7 @@ function QuestionItem({ question, index }: QuestionItemProps) {
         <View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
             <Text style={{ fontFamily: 'Poppins_700Bold', fontSize: 14, color: '#F59E0B' }}>
-              {question.option_b}
+              {question.emojiB} {question.optionB}
             </Text>
             <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 14, color: '#71717a' }}>
               {question.votes_b} votes ({percentageB}%)

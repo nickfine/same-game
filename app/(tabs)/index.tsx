@@ -17,7 +17,6 @@ import { useComplianceContext } from '../../components/ComplianceProvider';
 import { useHyperstreak } from '../../hooks/useHyperstreak';
 import { AppHeader } from '../../components/AppHeader';
 import { UserMenu } from '../../components/UserMenu';
-import { QuestionTeaser } from '../../components/QuestionTeaser';
 import { VoteButtons } from '../../components/VoteButtons';
 import { AnswerMorphReveal, AnswerMorphRevealRef } from '../../components/AnswerMorphReveal';
 import { AchievementToast } from '../../components/AchievementToast';
@@ -126,7 +125,8 @@ export default function FeedScreen() {
   const [flashVariant, setFlashVariant] = useState<'correct' | 'wrong'>('correct');
   
   // Track pending streak death to show after result animation
-  const [pendingStreakDeath, setPendingStreakDeath] = useState<number | null>(null);
+  // Using ref instead of state to avoid closure issues with the morph callback
+  const pendingStreakDeathRef = useRef<number | null>(null);
 
   // Morph Reveal ref (imperative API)
   const morphRevealRef = useRef<AnswerMorphRevealRef>(null);
@@ -249,7 +249,7 @@ export default function FeedScreen() {
       // Check for streak death (loss aversion trigger)
       const lostStreak = !result.won && result.previousStreak > 0;
       if (lostStreak) {
-        setPendingStreakDeath(result.previousStreak);
+        pendingStreakDeathRef.current = result.previousStreak;
       }
       
       // Check for mystery chest after vote
@@ -269,6 +269,7 @@ export default function FeedScreen() {
   // MORPH COMPLETE - Called when reveal animation finishes
   // ═══════════════════════════════════════════════════════════════
   const handleMorphComplete = useCallback(() => {
+    const pendingStreakDeath = pendingStreakDeathRef.current;
     setShowingResult(false);
     setUserChoice(null);
     setShowFlash(false);
@@ -277,7 +278,7 @@ export default function FeedScreen() {
     // Check if we have a pending streak death to show
     if (pendingStreakDeath !== null) {
       handleStreakDeath(pendingStreakDeath);
-      setPendingStreakDeath(null);
+      pendingStreakDeathRef.current = null;
       return;
     }
 
@@ -285,7 +286,7 @@ export default function FeedScreen() {
     if (!showChest) {
       nextQuestion();
     }
-  }, [resetVote, nextQuestion, showChest, pendingStreakDeath, handleStreakDeath]);
+  }, [resetVote, nextQuestion, showChest, handleStreakDeath]);
   
   // Handle hyperstreak activation complete
   const handleHyperActivationComplete = useCallback(() => {
@@ -571,25 +572,15 @@ export default function FeedScreen() {
         )}
 
         {/* ═══════════════════════════════════════════════════════════
-            NEXT 10% - Question Teaser
-        ═══════════════════════════════════════════════════════════ */}
-        {currentQuestion && (
-          <View style={styles.teaserSection}>
-            <QuestionTeaser 
-              text={currentQuestion.text}
-              visible={!showingResult}
-            />
-          </View>
-        )}
-
-        {/* ═══════════════════════════════════════════════════════════
-            65% - Hero Vote Buttons
+            75% - Hero Vote Buttons (No teaser text - emoji-first UI)
         ═══════════════════════════════════════════════════════════ */}
         {currentQuestion && (
           <View style={styles.heroButtonsSection}>
             <VoteButtons
-              optionA={currentQuestion.option_a}
-              optionB={currentQuestion.option_b}
+              optionA={currentQuestion.optionA}
+              optionB={currentQuestion.optionB}
+              emojiA={currentQuestion.emojiA}
+              emojiB={currentQuestion.emojiB}
               onVote={handleVote}
               disabled={voteLoading || showingResult}
               hidden={showingResult}
@@ -625,8 +616,8 @@ export default function FeedScreen() {
         ═══════════════════════════════════════════════════════════ */}
         <AnswerMorphReveal
           ref={morphRevealRef}
-          optionA={currentQuestion?.option_a ?? ''}
-          optionB={currentQuestion?.option_b ?? ''}
+          optionA={currentQuestion?.optionA ?? ''}
+          optionB={currentQuestion?.optionB ?? ''}
           onComplete={handleMorphComplete}
         />
 
@@ -791,12 +782,8 @@ const styles = StyleSheet.create({
   headerSection: {
     // ~15% of screen
   },
-  teaserSection: {
-    // ~10% of screen
-    justifyContent: 'center',
-  },
   heroButtonsSection: {
-    flex: 1, // Takes remaining ~65%
+    flex: 1, // Takes remaining ~75% (no teaser)
     marginHorizontal: 0,
   },
   powerUpSection: {

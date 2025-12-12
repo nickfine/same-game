@@ -7,6 +7,7 @@ import Animated, {
   withDelay,
   withSequence,
   withSpring,
+  withRepeat,
   Easing,
   interpolate,
   runOnJS,
@@ -19,68 +20,29 @@ import { COLORS } from '../lib/constants';
 import type { VoteResult, VoteChoice } from '../types';
 
 // ═══════════════════════════════════════════════════════════════
-// SASSY COMMENTARY - Randomized dopamine text
+// RESULT MESSAGES - Crystal clear win/lose feedback
 // ═══════════════════════════════════════════════════════════════
-const SASSY_LINES = {
-  winner_landslide: [
-    "{loser} fans in shambles",
-    "The {loserPercent}% are built different",
-    "{winner} supremacy confirmed",
-    "Not even close tbh",
-    "Unanimous energy",
-  ],
-  winner_close: [
-    "That was TIGHT",
-    "Photo finish energy",
-    "{loserPercent}% almost had it",
-    "Neck and neck fr",
-    "Could've gone either way",
-  ],
-  user_won: [
-    "You're literally psychic",
-    "Main character behavior",
-    "The algorithm fears you",
-    "Built different",
-    "Same energy as everyone",
-  ],
-  user_lost: [
-    "Contrarian detected",
-    "Bold take, wrong crowd",
-    "You zigged when they zagged",
-    "Rare opinion unlocked",
-    "Not like other voters",
-  ],
-};
+const WIN_MESSAGES = [
+  "NAILED IT",
+  "PSYCHIC",
+  "BIG BRAIN",
+  "HIVEMIND",
+  "LEGEND",
+  "GOAT",
+];
 
-function getSassyLine(
-  userWon: boolean,
-  winnerPercent: number,
-  winner: string,
-  loser: string,
-  loserPercent: number
-): string {
-  let pool: string[];
-  
-  if (userWon) {
-    pool = SASSY_LINES.user_won;
-  } else {
-    pool = SASSY_LINES.user_lost;
-  }
-  
-  // Add context-based lines
-  if (winnerPercent >= 70) {
-    pool = [...pool, ...SASSY_LINES.winner_landslide];
-  } else if (winnerPercent <= 55) {
-    pool = [...pool, ...SASSY_LINES.winner_close];
-  }
-  
-  const line = pool[Math.floor(Math.random() * pool.length)];
-  
-  return line
-    .replace('{winner}', winner)
-    .replace('{loser}', loser)
-    .replace('{loserPercent}', loserPercent.toString())
-    .replace('{winnerPercent}', winnerPercent.toString());
+const LOSE_MESSAGES = [
+  "RARE TAKE",
+  "SOLO MISSION",
+  "BUILT DIFFERENT",
+  "UNIQUE",
+  "CONTRARIAN",
+  "REBEL",
+];
+
+function getResultMessage(won: boolean): string {
+  const pool = won ? WIN_MESSAGES : LOSE_MESSAGES;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -127,49 +89,46 @@ export const AnswerMorphReveal = forwardRef<AnswerMorphRevealRef, AnswerMorphRev
       doubleDownActive: false,
     });
     
-    const [sassyLine, setSassyLine] = useState('');
+    const [resultMessage, setResultMessage] = useState('');
     const [showConfetti, setShowConfetti] = useState(false);
     
     // Animation values
     const containerOpacity = useSharedValue(0);
-    const layoutProgress = useSharedValue(0); // 0 = vertical, 1 = horizontal
+    const resultScale = useSharedValue(0);
+    const resultRotation = useSharedValue(0);
     const barAFill = useSharedValue(0);
     const barBFill = useSharedValue(0);
     const percentA = useSharedValue(0);
     const percentB = useSharedValue(0);
-    const crownScale = useSharedValue(0);
-    const crownY = useSharedValue(-50);
-    const sassyOpacity = useSharedValue(0);
+    const messageOpacity = useSharedValue(0);
+    const messageY = useSharedValue(30);
+    const pulseScale = useSharedValue(1);
     const hyperBadgeScale = useSharedValue(0);
     
     // Responsive sizing
-    const barHeight = screenHeight < 700 ? 70 : screenHeight > 900 ? 90 : 80;
-    const fontSize = screenHeight < 700 ? 32 : screenHeight > 900 ? 44 : 38;
-    const labelSize = screenHeight < 700 ? 14 : 16;
+    const barHeight = screenHeight < 700 ? 60 : screenHeight > 900 ? 80 : 70;
+    const fontSize = screenHeight < 700 ? 28 : screenHeight > 900 ? 36 : 32;
+    const labelSize = screenHeight < 700 ? 12 : 14;
+    const resultEmojiSize = screenHeight < 700 ? 80 : screenHeight > 900 ? 120 : 100;
+    const resultTextSize = screenHeight < 700 ? 48 : screenHeight > 900 ? 72 : 60;
 
     // Imperative API
     useImperativeHandle(ref, () => ({
       reveal: (result, userChoice, options = {}) => {
         // Reset animations
         containerOpacity.value = 0;
-        layoutProgress.value = 0;
+        resultScale.value = 0;
+        resultRotation.value = -15;
         barAFill.value = 0;
         barBFill.value = 0;
         percentA.value = 0;
         percentB.value = 0;
-        crownScale.value = 0;
-        crownY.value = -50;
-        sassyOpacity.value = 0;
+        messageOpacity.value = 0;
+        messageY.value = 30;
+        pulseScale.value = 1;
         hyperBadgeScale.value = 0;
         
-        // Determine winner and generate sassy line
-        const winnerIsA = result.percentage_a >= result.percentage_b;
-        const winner = winnerIsA ? optionA : optionB;
-        const loser = winnerIsA ? optionB : optionA;
-        const winnerPercent = Math.max(result.percentage_a, result.percentage_b);
-        const loserPercent = Math.min(result.percentage_a, result.percentage_b);
-        
-        setSassyLine(getSassyLine(result.won, winnerPercent, winner, loser, loserPercent));
+        setResultMessage(getResultMessage(result.won));
         setShowConfetti(false);
         
         setState({
@@ -181,72 +140,82 @@ export const AnswerMorphReveal = forwardRef<AnswerMorphRevealRef, AnswerMorphRev
         });
         
         // ═══════════════════════════════════════════════════════════
-        // ANIMATION TIMELINE - 0.9s core sequence
+        // ANIMATION TIMELINE - Dramatic reveal
         // ═══════════════════════════════════════════════════════════
         
-        // 0ms: Heavy haptic + show container
+        // 0ms: Heavy haptic + show container with color
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        containerOpacity.value = withTiming(1, { duration: 100 });
+        containerOpacity.value = withTiming(1, { duration: 150 });
         
-        // 0-150ms: Layout morph (vertical → horizontal)
-        layoutProgress.value = withTiming(1, {
-          duration: 150,
-          easing: Easing.out(Easing.cubic),
-        });
-        
-        // 150-750ms: Liquid fill + number count-up
-        barAFill.value = withDelay(150, withTiming(result.percentage_a / 100, {
-          duration: 600,
-          easing: Easing.out(Easing.exp),
-        }));
-        barBFill.value = withDelay(150, withTiming(result.percentage_b / 100, {
-          duration: 600,
-          easing: Easing.out(Easing.exp),
-        }));
-        percentA.value = withDelay(150, withTiming(result.percentage_a, {
-          duration: 600,
-          easing: Easing.out(Easing.exp),
-        }));
-        percentB.value = withDelay(150, withTiming(result.percentage_b, {
-          duration: 600,
-          easing: Easing.out(Easing.exp),
-        }));
-        
-        // 600ms: Crown + text slam
-        crownScale.value = withDelay(600, withSequence(
-          withSpring(1.3, { damping: 8, stiffness: 300 }),
-          withSpring(1, { damping: 12 })
+        // 0-300ms: Big result emoji/text slam in with rotation
+        resultScale.value = withDelay(50, withSequence(
+          withSpring(1.4, { damping: 6, stiffness: 400 }),
+          withSpring(1, { damping: 10 })
         ));
-        crownY.value = withDelay(600, withSpring(0, { damping: 12, stiffness: 200 }));
+        resultRotation.value = withDelay(50, withSpring(0, { damping: 12, stiffness: 200 }));
         
-        // 700ms: Confetti + sassy line
+        // 200ms: Start pulse animation for result (win only)
+        if (result.won) {
+          setTimeout(() => {
+            pulseScale.value = withRepeat(
+              withSequence(
+                withTiming(1.05, { duration: 400 }),
+                withTiming(1, { duration: 400 })
+              ),
+              3,
+              true
+            );
+          }, 300);
+        }
+        
+        // 400-900ms: Bars fill up
+        barAFill.value = withDelay(400, withTiming(result.percentage_a / 100, {
+          duration: 500,
+          easing: Easing.out(Easing.exp),
+        }));
+        barBFill.value = withDelay(400, withTiming(result.percentage_b / 100, {
+          duration: 500,
+          easing: Easing.out(Easing.exp),
+        }));
+        percentA.value = withDelay(400, withTiming(result.percentage_a, {
+          duration: 500,
+          easing: Easing.out(Easing.exp),
+        }));
+        percentB.value = withDelay(400, withTiming(result.percentage_b, {
+          duration: 500,
+          easing: Easing.out(Easing.exp),
+        }));
+        
+        // 600ms: Message slide up
+        messageOpacity.value = withDelay(600, withTiming(1, { duration: 300 }));
+        messageY.value = withDelay(600, withSpring(0, { damping: 15 }));
+        
+        // 500ms: Confetti (win only) or shake (lose)
         setTimeout(() => {
-          setShowConfetti(true);
-          Haptics.notificationAsync(
-            result.won 
-              ? Haptics.NotificationFeedbackType.Success 
-              : Haptics.NotificationFeedbackType.Warning
-          );
-        }, 700);
-        
-        sassyOpacity.value = withDelay(700, withTiming(1, { duration: 300 }));
+          if (result.won) {
+            setShowConfetti(true);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          } else {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          }
+        }, 500);
         
         // Hyperstreak badge
         if (options.inHyperstreak) {
-          hyperBadgeScale.value = withDelay(500, withSequence(
+          hyperBadgeScale.value = withDelay(700, withSequence(
             withSpring(1.2, { damping: 8 }),
             withSpring(1, { damping: 10 })
           ));
         }
         
-        // 2200ms: Auto-dismiss
+        // 2500ms: Auto-dismiss
         setTimeout(() => {
           containerOpacity.value = withTiming(0, { duration: 300 }, (finished) => {
             if (finished) {
               runOnJS(handleDismiss)();
             }
           });
-        }, 2200);
+        }, 2500);
       },
       
       dismiss: () => {
@@ -260,6 +229,7 @@ export const AnswerMorphReveal = forwardRef<AnswerMorphRevealRef, AnswerMorphRev
     const handleDismiss = useCallback(() => {
       setState(s => ({ ...s, active: false }));
       setShowConfetti(false);
+      cancelAnimation(pulseScale);
       onComplete();
     }, [onComplete]);
     
@@ -271,23 +241,19 @@ export const AnswerMorphReveal = forwardRef<AnswerMorphRevealRef, AnswerMorphRev
       opacity: containerOpacity.value,
     }));
     
-    const barsContainerStyle = useAnimatedStyle(() => ({
-      flexDirection: layoutProgress.value > 0.5 ? 'row' : 'column',
-      gap: interpolate(layoutProgress.value, [0, 1], [0, 8]),
+    const resultStyle = useAnimatedStyle(() => ({
+      transform: [
+        { scale: resultScale.value * pulseScale.value },
+        { rotate: `${resultRotation.value}deg` },
+      ],
     }));
     
     const barAStyle = useAnimatedStyle(() => ({
-      flex: 1,
       height: barHeight,
-      borderRadius: 16,
-      overflow: 'hidden',
     }));
     
     const barBStyle = useAnimatedStyle(() => ({
-      flex: 1,
       height: barHeight,
-      borderRadius: 16,
-      overflow: 'hidden',
     }));
     
     const fillAStyle = useAnimatedStyle(() => ({
@@ -300,15 +266,9 @@ export const AnswerMorphReveal = forwardRef<AnswerMorphRevealRef, AnswerMorphRev
       height: '100%',
     }));
     
-    const crownStyle = useAnimatedStyle(() => ({
-      transform: [
-        { scale: crownScale.value },
-        { translateY: crownY.value },
-      ],
-    }));
-    
-    const sassyStyle = useAnimatedStyle(() => ({
-      opacity: sassyOpacity.value,
+    const messageStyle = useAnimatedStyle(() => ({
+      opacity: messageOpacity.value,
+      transform: [{ translateY: messageY.value }],
     }));
     
     const hyperBadgeStyle = useAnimatedStyle(() => ({
@@ -324,35 +284,74 @@ export const AnswerMorphReveal = forwardRef<AnswerMorphRevealRef, AnswerMorphRev
     const winnerIsA = result.percentage_a >= result.percentage_b;
     const userChoseA = userChoice === 'a';
     const userWon = result.won;
+    const userPercent = userChoseA ? result.percentage_a : result.percentage_b;
+    
+    // Colors based on win/lose
+    const backdropColor = userWon 
+      ? 'rgba(0, 40, 30, 0.97)' // Dark green tint
+      : 'rgba(40, 10, 20, 0.97)'; // Dark red tint
+    
+    const resultColor = userWon ? '#00FFBD' : '#FF3B6E';
+    const resultEmoji = userWon ? '✓' : '✗';
+    const resultLabel = userWon ? 'SAME!' : 'NOPE';
     
     return (
       <Animated.View style={[styles.container, containerStyle]}>
-        {/* Background overlay */}
-        <View style={styles.backdrop} />
+        {/* Background overlay with win/lose color */}
+        <View style={[styles.backdrop, { backgroundColor: backdropColor }]} />
         
-        {/* Crown + Winner text */}
-        <Animated.View style={[styles.crownContainer, crownStyle]}>
-          <Text style={styles.crownEmoji}>👑</Text>
-          <Text style={[styles.sameText, { color: userWon ? '#00FFBD' : '#FF3B6E' }]}>
-            {Math.max(result.percentage_a, result.percentage_b)}% SAME
+        {/* Glow effect */}
+        <View style={[
+          styles.glowOverlay,
+          { backgroundColor: userWon ? 'rgba(0, 255, 189, 0.1)' : 'rgba(255, 59, 110, 0.1)' }
+        ]} />
+        
+        {/* BIG Result indicator */}
+        <Animated.View style={[styles.resultContainer, resultStyle]}>
+          <Text style={[
+            styles.resultEmoji,
+            { 
+              fontSize: resultEmojiSize,
+              color: resultColor,
+              textShadowColor: resultColor,
+            }
+          ]}>
+            {resultEmoji}
           </Text>
+          <Text style={[
+            styles.resultLabel,
+            { 
+              fontSize: resultTextSize,
+              color: resultColor,
+              textShadowColor: resultColor,
+            }
+          ]}>
+            {resultLabel}
+          </Text>
+        </Animated.View>
+        
+        {/* Your percentage */}
+        <Animated.View style={[styles.yourResultContainer, messageStyle]}>
+          <Text style={[styles.yourResultText, { color: resultColor }]}>
+            You: {userPercent}%
+          </Text>
+          <Text style={styles.resultMessageText}>{resultMessage}</Text>
         </Animated.View>
         
         {/* Hyperstreak Badge */}
         {inHyperstreak && (
           <Animated.View style={[styles.hyperBadge, hyperBadgeStyle]}>
-            <Text style={styles.hyperBadgeText}>⚡ 2X BLAST 💥</Text>
+            <Text style={styles.hyperBadgeText}>⚡ 2X POINTS ⚡</Text>
           </Animated.View>
         )}
         
-        {/* Horizontal Bars */}
-        <Animated.View style={[styles.barsContainer, barsContainerStyle]}>
+        {/* Compact Bars */}
+        <View style={styles.barsContainer}>
           {/* Bar A */}
           <Animated.View style={[
             styles.bar,
             barAStyle,
             userChoseA && styles.userChoiceBar,
-            winnerIsA && styles.winnerBar,
           ]}>
             <View style={styles.barBackground}>
               <Animated.View style={[styles.barFill, fillAStyle]}>
@@ -369,7 +368,7 @@ export const AnswerMorphReveal = forwardRef<AnswerMorphRevealRef, AnswerMorphRev
               <AnimatedPercent value={percentA} fontSize={fontSize} />
               <Text style={[styles.barLabel, { fontSize: labelSize }]} numberOfLines={1}>
                 {optionA}
-                {userChoseA && ' (YOU)'}
+                {userChoseA && ' ← YOU'}
               </Text>
             </View>
           </Animated.View>
@@ -379,7 +378,6 @@ export const AnswerMorphReveal = forwardRef<AnswerMorphRevealRef, AnswerMorphRev
             styles.bar,
             barBStyle,
             !userChoseA && styles.userChoiceBar,
-            !winnerIsA && styles.winnerBar,
           ]}>
             <View style={styles.barBackground}>
               <Animated.View style={[styles.barFill, fillBStyle]}>
@@ -396,18 +394,13 @@ export const AnswerMorphReveal = forwardRef<AnswerMorphRevealRef, AnswerMorphRev
               <AnimatedPercent value={percentB} fontSize={fontSize} />
               <Text style={[styles.barLabel, { fontSize: labelSize }]} numberOfLines={1}>
                 {optionB}
-                {!userChoseA && ' (YOU)'}
+                {!userChoseA && ' ← YOU'}
               </Text>
             </View>
           </Animated.View>
-        </Animated.View>
+        </View>
         
-        {/* Sassy Commentary */}
-        <Animated.View style={[styles.sassyContainer, sassyStyle]}>
-          <Text style={styles.sassyText}>{sassyLine}</Text>
-        </Animated.View>
-        
-        {/* Confetti - bursts from winner position (only on wins) */}
+        {/* Confetti - only on wins */}
         {showConfetti && userWon && (
           <ConfettiCannon
             shoot={true}
@@ -424,16 +417,10 @@ export const AnswerMorphReveal = forwardRef<AnswerMorphRevealRef, AnswerMorphRev
 // ANIMATED PERCENT COUNTER
 // ═══════════════════════════════════════════════════════════════
 function AnimatedPercent({ value, fontSize }: { value: Animated.SharedValue<number>; fontSize: number }) {
-  const animatedProps = useAnimatedStyle(() => {
-    return {};
-  });
-  
-  // Use a derived value for the text
   const [displayValue, setDisplayValue] = useState(0);
   
   useEffect(() => {
     const interval = setInterval(() => {
-      // This is a workaround - in production use reanimated's useDerivedValue
       setDisplayValue(Math.round(value.value));
     }, 16);
     
@@ -441,9 +428,9 @@ function AnimatedPercent({ value, fontSize }: { value: Animated.SharedValue<numb
   }, [value]);
   
   return (
-    <Animated.Text style={[styles.percentText, { fontSize }]}>
+    <Text style={[styles.percentText, { fontSize }]}>
       {displayValue}%
-    </Animated.Text>
+    </Text>
   );
 }
 
@@ -455,36 +442,55 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 1000,
     justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 16,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 15, 26, 0.95)',
   },
-  crownContainer: {
+  glowOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  resultContainer: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
-  crownEmoji: {
-    fontSize: 48,
-    marginBottom: 8,
+  resultEmoji: {
+    fontWeight: '900',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 30,
   },
-  sameText: {
-    fontSize: 28,
+  resultLabel: {
     fontFamily: 'Righteous_400Regular',
-    letterSpacing: 3,
-    textShadowColor: 'rgba(0, 255, 189, 0.5)',
+    letterSpacing: 8,
+    marginTop: -10,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 20,
   },
+  yourResultContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  yourResultText: {
+    fontSize: 24,
+    fontFamily: 'SpaceGrotesk_700Bold',
+    letterSpacing: 2,
+  },
+  resultMessageText: {
+    fontSize: 18,
+    fontFamily: 'Poppins_600SemiBold',
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 4,
+    letterSpacing: 3,
+  },
   hyperBadge: {
     position: 'absolute',
-    top: 100,
+    top: 80,
     alignSelf: 'center',
     backgroundColor: '#00FFBD',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
     shadowColor: '#00FFBD',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
@@ -493,20 +499,24 @@ const styles = StyleSheet.create({
   },
   hyperBadgeText: {
     color: '#000',
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: 'Righteous_400Regular',
     letterSpacing: 2,
   },
   barsContainer: {
+    width: '100%',
+    gap: 8,
     paddingHorizontal: 8,
   },
   bar: {
     position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   barBackground: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 16,
+    borderRadius: 12,
     overflow: 'hidden',
   },
   barFill: {
@@ -514,7 +524,7 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    borderRadius: 16,
+    borderRadius: 12,
     overflow: 'hidden',
   },
   barContent: {
@@ -538,28 +548,9 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   userChoiceBar: {
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  winnerBar: {
-    shadowColor: '#00FFBD',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 15,
-    elevation: 8,
-  },
-  sassyContainer: {
-    marginTop: 24,
-    alignItems: 'center',
-  },
-  sassyText: {
-    fontSize: 16,
-    fontFamily: 'Poppins_500Medium',
-    color: COLORS.textMuted,
-    textAlign: 'center',
-    fontStyle: 'italic',
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
   },
 });
 
 AnswerMorphReveal.displayName = 'AnswerMorphReveal';
-

@@ -20,7 +20,8 @@ function HistoryItem({ item, index }: HistoryItemProps) {
   const percentageA = totalVotes > 0 ? Math.round((question.votes_a / totalVotes) * 100) : 50;
   const percentageB = 100 - percentageA;
   
-  const yourChoice = vote.choice === 'a' ? question.option_a : question.option_b;
+  const yourChoice = vote.choice === 'a' ? question.optionA : question.optionB;
+  const yourEmoji = vote.choice === 'a' ? question.emojiA : question.emojiB;
   const yourPercentage = vote.choice === 'a' ? percentageA : percentageB;
 
   return (
@@ -66,17 +67,18 @@ function HistoryItem({ item, index }: HistoryItemProps) {
         </Text>
       </View>
 
-      {/* Question */}
-      <Text 
-        style={{ 
-          fontFamily: 'Poppins_700Bold',
-          fontSize: 16,
-          color: '#18181b',
-          marginBottom: 12,
-        }}
-      >
-        {question.text}
-      </Text>
+      {/* Question - Emoji display */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <Text style={{ fontSize: 24 }}>{question.emojiA}</Text>
+        <Text style={{ fontFamily: 'Poppins_700Bold', fontSize: 16, color: '#18181b' }}>
+          {question.optionA}
+        </Text>
+        <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 14, color: '#71717a' }}>vs</Text>
+        <Text style={{ fontSize: 24 }}>{question.emojiB}</Text>
+        <Text style={{ fontFamily: 'Poppins_700Bold', fontSize: 16, color: '#18181b' }}>
+          {question.optionB}
+        </Text>
+      </View>
 
       {/* Your Choice */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -104,7 +106,7 @@ function HistoryItem({ item, index }: HistoryItemProps) {
               color: '#ffffff',
             }}
           >
-            {yourChoice} ({yourPercentage}%)
+            {yourEmoji} {yourChoice} ({yourPercentage}%)
           </Text>
         </View>
       </View>
@@ -117,10 +119,10 @@ function HistoryItem({ item, index }: HistoryItemProps) {
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
           <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 12, color: '#71717a' }}>
-            {question.option_a}: {percentageA}%
+            {question.emojiA} {question.optionA}: {percentageA}%
           </Text>
           <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 12, color: '#71717a' }}>
-            {question.option_b}: {percentageB}%
+            {question.emojiB} {question.optionB}: {percentageB}%
           </Text>
         </View>
       </View>

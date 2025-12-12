@@ -36,6 +36,10 @@ export interface User {
   questions_in_hyper: number; // Count of questions answered during hyperstreak (max 5)
   hyperstreak_count: number; // Total hyperstreaks achieved (analytics)
   
+  // Level system
+  level?: number; // Player level (calculated from XP)
+  xp?: number; // Experience points
+  
   // Anti-cheat flag
   cheat_flag?: boolean; // Set by Cloud Function if cheating detected
 }
@@ -89,9 +93,11 @@ export interface UserStats {
 
 export interface Question {
   id: string;
-  text: string;
-  option_a: string;
-  option_b: string;
+  optionA: string;       // e.g. "MORNING"
+  emojiA: string;        // e.g. "🌅"
+  optionB: string;       // e.g. "NIGHT"
+  emojiB: string;        // e.g. "🌙"
+  spicyContext?: string; // e.g. "shower thoughts" - only shown in ShareCard
   votes_a: number;
   votes_b: number;
   created_at: Timestamp;
@@ -127,9 +133,11 @@ export interface VoteResult {
 }
 
 export interface CreateQuestionInput {
-  text: string;
-  option_a: string;
-  option_b: string;
+  optionA: string;
+  emojiA: string;
+  optionB: string;
+  emojiB: string;
+  spicyContext?: string;
   initial_vote: VoteChoice;
 }
 

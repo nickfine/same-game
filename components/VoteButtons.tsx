@@ -11,8 +11,6 @@ import Animated, {
   withDelay,
   Easing,
   cancelAnimation,
-  FadeIn,
-  SlideInDown,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { playSoundGlobal } from '../hooks/useSound';
@@ -31,6 +29,8 @@ interface PeekData {
 interface VoteButtonsProps {
   optionA: string;
   optionB: string;
+  emojiA: string;
+  emojiB: string;
   onVote: (choice: VoteChoice) => void;
   disabled?: boolean;
   hidden?: boolean;
@@ -40,71 +40,7 @@ interface VoteButtonsProps {
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-// ═══════════════════════════════════════════════════════════════
-// ICON HEURISTICS - Smart icon selection based on option text
-// ═══════════════════════════════════════════════════════════════
-function getIconForOption(option: string): string {
-  const lower = option.toLowerCase();
-  
-  // Transportation
-  if (lower.includes('electric') || lower.includes('tesla') || lower.includes('ev')) return '⚡';
-  if (lower.includes('gas') || lower.includes('petrol') || lower.includes('diesel')) return '⛽';
-  if (lower.includes('car') || lower.includes('drive')) return '🚗';
-  if (lower.includes('plane') || lower.includes('fly')) return '✈️';
-  if (lower.includes('train')) return '🚂';
-  if (lower.includes('bike') || lower.includes('cycle')) return '🚴';
-  
-  // Food
-  if (lower.includes('pizza')) return '🍕';
-  if (lower.includes('burger')) return '🍔';
-  if (lower.includes('coffee')) return '☕';
-  if (lower.includes('tea')) return '🍵';
-  if (lower.includes('beer') || lower.includes('drink')) return '🍺';
-  if (lower.includes('wine')) return '🍷';
-  if (lower.includes('taco')) return '🌮';
-  if (lower.includes('sushi')) return '🍣';
-  
-  // Tech
-  if (lower.includes('iphone') || lower.includes('apple')) return '🍎';
-  if (lower.includes('android') || lower.includes('samsung')) return '🤖';
-  if (lower.includes('mac') || lower.includes('laptop')) return '💻';
-  if (lower.includes('game') || lower.includes('play')) return '🎮';
-  
-  // Entertainment
-  if (lower.includes('movie') || lower.includes('film')) return '🎬';
-  if (lower.includes('music') || lower.includes('song')) return '🎵';
-  if (lower.includes('netflix')) return '📺';
-  if (lower.includes('book') || lower.includes('read')) return '📚';
-  
-  // Social
-  if (lower.includes('instagram') || lower.includes('insta')) return '📸';
-  if (lower.includes('twitter') || lower.includes('x')) return '🐦';
-  if (lower.includes('tiktok')) return '🎵';
-  
-  // Activities
-  if (lower.includes('gym') || lower.includes('workout')) return '💪';
-  if (lower.includes('beach')) return '🏖️';
-  if (lower.includes('mountain') || lower.includes('hike')) return '⛰️';
-  if (lower.includes('sleep') || lower.includes('nap')) return '😴';
-  if (lower.includes('party')) return '🎉';
-  
-  // Time
-  if (lower.includes('morning')) return '🌅';
-  if (lower.includes('night') || lower.includes('evening')) return '🌙';
-  if (lower.includes('weekend')) return '🎊';
-  
-  // Emotions/Concepts
-  if (lower.includes('yes') || lower.includes('agree')) return '✅';
-  if (lower.includes('no') || lower.includes('disagree')) return '❌';
-  if (lower.includes('love')) return '❤️';
-  if (lower.includes('money') || lower.includes('rich')) return '💰';
-  if (lower.includes('hot') || lower.includes('fire')) return '🔥';
-  if (lower.includes('cold') || lower.includes('ice')) return '❄️';
-  
-  // Default fallback based on position (will be overridden)
-  return '';
-}
+const AnimatedText = Animated.createAnimatedComponent(Text);
 
 // ═══════════════════════════════════════════════════════════════
 // COMPONENT
@@ -112,6 +48,8 @@ function getIconForOption(option: string): string {
 export function VoteButtons({
   optionA,
   optionB,
+  emojiA,
+  emojiB,
   onVote,
   disabled,
   hidden,
@@ -121,31 +59,36 @@ export function VoteButtons({
 }: VoteButtonsProps) {
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
   
-  // Animation values
+  // Button animation values
   const scaleA = useSharedValue(0.95);
   const scaleB = useSharedValue(0.95);
   const translateYA = useSharedValue(100);
   const translateYB = useSharedValue(100);
   const pulseA = useSharedValue(1);
   const pulseB = useSharedValue(1);
-  const pressedA = useSharedValue(false);
-  const pressedB = useSharedValue(false);
   
-  // Responsive sizing
-  const fontSize = screenHeight < 700 ? 40 : screenHeight > 900 ? 52 : 48;
-  const iconSize = screenHeight < 700 ? 32 : screenHeight > 900 ? 44 : 38;
-  const buttonHeight = (screenHeight * 0.65) / 2 - 8; // 65% of screen, split by 2, minus gap
+  // Emoji pop-in animation values (scale 0 → 1.3 → 1)
+  const emojiScaleA = useSharedValue(0);
+  const emojiScaleB = useSharedValue(0);
   
-  // Get icons
-  const iconA = getIconForOption(optionA) || '🟣';
-  const iconB = getIconForOption(optionB) || '🟠';
+  // Hyperstreak emoji glow pulse
+  const emojiGlowRadius = useSharedValue(8);
+  
+  // Responsive sizing - optimized for emoji-first design
+  const emojiSize = 48; // Fixed 48pt as specified
+  const textSize = 56;  // Fixed 56pt bold as specified
+  const buttonHeight = (screenHeight * 0.70) / 2 - 8; // 70% of screen, split by 2, minus gap
 
   // ═══════════════════════════════════════════════════════════════
-  // ENTRANCE ANIMATION
+  // ENTRANCE ANIMATION + EMOJI POP-IN
   // ═══════════════════════════════════════════════════════════════
   useEffect(() => {
     if (!hidden) {
-      // Staggered slide-up + overshoot scale
+      // Reset emoji scales
+      emojiScaleA.value = 0;
+      emojiScaleB.value = 0;
+      
+      // Staggered slide-up + overshoot scale for buttons
       translateYA.value = withDelay(0, withSpring(0, { damping: 18, stiffness: 180 }));
       scaleA.value = withDelay(0, withSequence(
         withSpring(1.05, { damping: 10, stiffness: 200 }),
@@ -157,13 +100,25 @@ export function VoteButtons({
         withSpring(1.05, { damping: 10, stiffness: 200 }),
         withSpring(1, { damping: 15 })
       ));
+      
+      // Emoji pop-in: scale 0 → 1.3 → 1 with micro-delay
+      emojiScaleA.value = withDelay(150, withSequence(
+        withSpring(1.3, { damping: 8, stiffness: 300 }),
+        withSpring(1, { damping: 12 })
+      ));
+      emojiScaleB.value = withDelay(230, withSequence( // 80ms stagger
+        withSpring(1.3, { damping: 8, stiffness: 300 }),
+        withSpring(1, { damping: 12 })
+      ));
     } else {
       translateYA.value = 100;
       translateYB.value = 100;
       scaleA.value = 0.95;
       scaleB.value = 0.95;
+      emojiScaleA.value = 0;
+      emojiScaleB.value = 0;
     }
-  }, [hidden]);
+  }, [hidden, optionA, optionB]); // Re-trigger on question change
 
   // ═══════════════════════════════════════════════════════════════
   // CONTINUOUS PULSE ANIMATION (2x speed in Hyperstreak)
@@ -189,9 +144,24 @@ export function VoteButtons({
       true
     ));
     
+    // Hyperstreak emoji glow pulse
+    if (inHyperstreak) {
+      emojiGlowRadius.value = withRepeat(
+        withSequence(
+          withTiming(20, { duration: 400, easing: Easing.inOut(Easing.ease) }),
+          withTiming(8, { duration: 400, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        true
+      );
+    } else {
+      emojiGlowRadius.value = 8;
+    }
+    
     return () => {
       cancelAnimation(pulseA);
       cancelAnimation(pulseB);
+      cancelAnimation(emojiGlowRadius);
     };
   }, [inHyperstreak]);
 
@@ -203,10 +173,8 @@ export function VoteButtons({
     
     if (option === 'a') {
       scaleA.value = withSpring(0.96, { damping: 15, stiffness: 300 });
-      pressedA.value = true;
     } else {
       scaleB.value = withSpring(0.96, { damping: 15, stiffness: 300 });
-      pressedB.value = true;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
@@ -214,10 +182,8 @@ export function VoteButtons({
   const handlePressOut = (option: 'a' | 'b') => {
     if (option === 'a') {
       scaleA.value = withSpring(1.0, { damping: 15 });
-      pressedA.value = false;
     } else {
       scaleB.value = withSpring(1.0, { damping: 15 });
-      pressedB.value = false;
     }
   };
 
@@ -248,15 +214,27 @@ export function VoteButtons({
     ],
     opacity: hidden ? 0 : 1,
   }));
+  
+  // Emoji animated styles with pop-in and hyperstreak glow
+  const emojiStyleA = useAnimatedStyle(() => ({
+    transform: [{ scale: emojiScaleA.value }],
+    textShadowColor: inHyperstreak ? '#00FFBD' : 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: inHyperstreak ? 0 : 2 },
+    textShadowRadius: inHyperstreak ? emojiGlowRadius.value : 4,
+  }));
+  
+  const emojiStyleB = useAnimatedStyle(() => ({
+    transform: [{ scale: emojiScaleB.value }],
+    textShadowColor: inHyperstreak ? '#00FFBD' : 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: inHyperstreak ? 0 : 2 },
+    textShadowRadius: inHyperstreak ? emojiGlowRadius.value : 4,
+  }));
 
   return (
     <View style={[styles.container, hidden && styles.hidden]}>
       {/* Double Down Active Indicator */}
       {doubleDownActive && (
-        <Animated.View 
-          entering={FadeIn.duration(200)}
-          style={styles.doubleDownBanner}
-        >
+        <Animated.View style={styles.doubleDownBanner}>
           <Text style={styles.doubleDownText}>🎲 2X POINTS ACTIVE</Text>
         </Animated.View>
       )}
@@ -297,10 +275,14 @@ export function VoteButtons({
           )}
           
           <View style={styles.buttonContent}>
-            <Text style={[styles.buttonIcon, { fontSize: iconSize }]}>{iconA}</Text>
+            {/* Emoji 48pt left */}
+            <AnimatedText style={[styles.buttonEmoji, { fontSize: emojiSize }, emojiStyleA]}>
+              {emojiA}
+            </AnimatedText>
+            {/* Text 56pt bold right */}
             <Text
-              style={[styles.buttonText, { fontSize }]}
-              numberOfLines={2}
+              style={[styles.buttonText, { fontSize: textSize }]}
+              numberOfLines={1}
               adjustsFontSizeToFit
             >
               {optionA.toUpperCase()}?
@@ -345,10 +327,14 @@ export function VoteButtons({
           )}
           
           <View style={styles.buttonContent}>
-            <Text style={[styles.buttonIcon, { fontSize: iconSize }]}>{iconB}</Text>
+            {/* Emoji 48pt left */}
+            <AnimatedText style={[styles.buttonEmoji, { fontSize: emojiSize }, emojiStyleB]}>
+              {emojiB}
+            </AnimatedText>
+            {/* Text 56pt bold right */}
             <Text
-              style={[styles.buttonText, { fontSize }]}
-              numberOfLines={2}
+              style={[styles.buttonText, { fontSize: textSize }]}
+              numberOfLines={1}
               adjustsFontSizeToFit
             >
               {optionB.toUpperCase()}?
@@ -427,22 +413,19 @@ const styles = StyleSheet.create({
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 20,
   },
-  buttonIcon: {
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+  buttonEmoji: {
+    // Emoji styling - will be animated
   },
   buttonText: {
     color: COLORS.white,
     fontFamily: 'Poppins_700Bold',
-    textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 0, height: 3 },
     textShadowRadius: 6,
-    letterSpacing: 1,
-    flex: 1,
+    letterSpacing: 2,
+    flexShrink: 1,
   },
   peekBadge: {
     position: 'absolute',
