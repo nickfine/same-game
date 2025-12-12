@@ -1,7 +1,8 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { POWER_UP_COSTS } from '../lib/constants';
 import { getTodayDate } from '../lib/dateUtils';
+import { HYPER, getStreakFreezeCapacity } from '../lib/hyperstreakLogic';
 import {
   usePowerUpSecure,
   claimRewardSecure,
@@ -81,7 +82,7 @@ function getRandomChestInterval(): number {
   );
 }
 
-export function useDopamineFeatures() {
+export function useDopamineFeatures(inHyperstreak: boolean = false) {
   const [state, setState] = useState<DopamineState>(DEFAULT_STATE);
   const [loading, setLoading] = useState(true);
   
@@ -91,6 +92,12 @@ export function useDopamineFeatures() {
   
   // Active power-up states (not persisted - per-session only)
   const [peekActive, setPeekActive] = useState(false);
+  
+  // Hyperstreak freeze capacity bonus (2x during hyperstreak)
+  const streakFreezeCapacity = useMemo(() => 
+    getStreakFreezeCapacity(inHyperstreak),
+    [inHyperstreak]
+  );
 
   // Load state from storage
   useEffect(() => {
@@ -391,6 +398,10 @@ export function useDopamineFeatures() {
     multiplierVotesRemaining: state.multiplierVotesRemaining,
     doubleDownActive: state.doubleDownActive,
     peekActive,
+    
+    // Hyperstreak bonus
+    streakFreezeCapacity, // 1 normally, 2 during hyperstreak
+    hyperstreakFreezeBonus: inHyperstreak ? HYPER.FREEZE_CAPACITY_BONUS : 0,
     
     // Modal visibility
     showChest,

@@ -14,9 +14,15 @@ service cloud.firestore {
       // Allow creation of new user document
       allow create: if request.auth != null && request.auth.uid == userId;
       
-      // Allow updates - but in production, economy operations should go through Cloud Functions
-      // This rule allows the current direct write mode to work during development
-      allow update: if request.auth != null && request.auth.uid == userId;
+      // Allow updates with HYPERSTREAK anti-cheat validation:
+      // - hyper_bar must be <= 10 (HYPER_BAR_MAX)
+      // - questions_in_hyper must be <= 5 (HYPER_DURATION_QUESTIONS)
+      // Additional anti-cheat is enforced by Cloud Functions
+      allow update: if request.auth != null && 
+                      request.auth.uid == userId &&
+                      // Hyperstreak anti-cheat rules
+                      (request.resource.data.hyper_bar == null || request.resource.data.hyper_bar <= 10) &&
+                      (request.resource.data.questions_in_hyper == null || request.resource.data.questions_in_hyper <= 5);
       
       // User's achievements subcollection
       match /achievements/{achievementId} {
@@ -90,6 +96,16 @@ service cloud.firestore {
                     resource.data.uid == request.auth.uid;
       // Only Cloud Functions (Admin SDK) can write
       allow write: if false;
+    }
+    
+    // =======================================================================
+    // HYPERSTREAK CHEAT LOGS (Analytics)
+    // Created by Cloud Functions when cheating is detected
+    // Only admins can read (not exposed to client)
+    // =======================================================================
+    match /hyperstreak_cheat_logs/{logId} {
+      allow read: if false; // Only Admin SDK
+      allow write: if false; // Only Cloud Functions
     }
     
   }

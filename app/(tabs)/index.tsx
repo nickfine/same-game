@@ -14,6 +14,7 @@ import { useDopamineFeatures } from '../../hooks/useDopamineFeatures';
 import { useStreakManager } from '../../hooks/useStreakManager';
 import { useLeaderboard } from '../../hooks/useLeaderboard';
 import { useComplianceContext } from '../../components/ComplianceProvider';
+import { useHyperstreak } from '../../hooks/useHyperstreak';
 import { AppHeader } from '../../components/AppHeader';
 import { UserMenu } from '../../components/UserMenu';
 import { QuestionCard } from '../../components/QuestionCard';
@@ -28,7 +29,10 @@ import { LevelUpModal } from '../../components/LevelUpModal';
 import { ResultReveal } from '../../components/ResultReveal';
 import { ConfettiCannon } from '../../components/ConfettiCannon';
 import { ScreenFlash } from '../../components/ScreenFlash';
+import { HyperstreakActivation } from '../../components/HyperstreakActivation';
+import { HyperstreakCrash } from '../../components/HyperstreakCrash';
 import { calculateLevel } from '../../lib/levels';
+import { HYPER } from '../../lib/hyperstreakLogic';
 import { deductUserScore, addUserScore } from '../../lib/firestore';
 import { COLORS, GRADIENTS } from '../../lib/constants';
 import type { VoteChoice } from '../../types';
@@ -50,7 +54,24 @@ export default function FeedScreen() {
   const { userRank } = useLeaderboard(uid);
   const { canVote, remainingVotes, showDailyVoteLimitModal, isMinor } = useComplianceContext();
   
-  // Dopamine features
+  // Hyperstreak management (2x dopamine mode) - must be before useDopamineFeatures
+  const {
+    hyperBar,
+    inHyperstreak,
+    progress: hyperProgress,
+    shouldPulse: shouldPulseHyper,
+    questionsRemaining: hyperQuestionsRemaining,
+    multiplier: hyperMultiplier,
+    showActivation: showHyperActivation,
+    showCrash: showHyperCrash,
+    incrementHyperBar,
+    tickHyperQuestion,
+    crashHyperstreak,
+    dismissActivation: dismissHyperActivation,
+    dismissCrash: dismissHyperCrash,
+  } = useHyperstreak(user);
+
+  // Dopamine features (pass hyperstreak state for freeze bonus)
   const {
     canSpin,
     showChest,
@@ -59,6 +80,7 @@ export default function FeedScreen() {
     activeMultiplier,
     doubleDownActive,
     peekActive,
+    streakFreezeCapacity,
     onVoteComplete,
     onChestClaimed,
     openDailySpin,
@@ -71,7 +93,7 @@ export default function FeedScreen() {
     activateDoubleDown,
     activateSkip,
     clearActiveEffects,
-  } = useDopamineFeatures();
+  } = useDopamineFeatures(inHyperstreak);
 
   // Streak death management (loss aversion)
   const hasStreakFreeze = powerUps.streakFreeze > 0;
@@ -100,6 +122,8 @@ export default function FeedScreen() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [showFlash, setShowFlash] = useState(false);
   const [flashVariant, setFlashVariant] = useState<'correct' | 'wrong'>('correct');
+  const [show2xBlast, setShow2xBlast] = useState(false);
+  const [hyperWinCoins, setHyperWinCoins] = useState(0);
 
   // Peek data for showing vote percentages
   interface PeekData {
@@ -189,8 +213,28 @@ export default function FeedScreen() {
       if (result.won) {
         setShowConfetti(true);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        
+        // ═══════════════════════════════════════════════════════════════
+        // HYPERSTREAK LOGIC - On correct answer
+        // ═══════════════════════════════════════════════════════════════
+        if (inHyperstreak) {
+          // In hyperstreak - 2x rewards + tick question
+          setShow2xBlast(true);
+          setHyperWinCoins(2); // 2x coins (base 1 * 2)
+          
+          // Tick the hyperstreak question counter
+          tickHyperQuestion();
+        } else {
+          // Not in hyperstreak - increment bar toward activation
+          incrementHyperBar();
+        }
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        
+        // ═══════════════════════════════════════════════════════════════
+        // HYPERSTREAK LOGIC - On wrong answer
+        // ═══════════════════════════════════════════════════════════════
+        crashHyperstreak(); // Resets bar, triggers crash anim if was in hyper
       }
       
       setShowCelebration(true);
@@ -226,6 +270,8 @@ export default function FeedScreen() {
     setUserChoice(null);
     setShowConfetti(false);
     setShowFlash(false);
+    setShow2xBlast(false);
+    setHyperWinCoins(0);
     resetVote();
 
     // Don't advance to next question if chest is about to show
@@ -233,6 +279,16 @@ export default function FeedScreen() {
       nextQuestion();
     }
   }, [resetVote, nextQuestion, showChest]);
+  
+  // Handle hyperstreak activation complete
+  const handleHyperActivationComplete = useCallback(() => {
+    dismissHyperActivation();
+  }, [dismissHyperActivation]);
+  
+  // Handle hyperstreak crash complete
+  const handleHyperCrashComplete = useCallback(() => {
+    dismissHyperCrash();
+  }, [dismissHyperCrash]);
 
   // Handle chest reward claimed
   const handleChestReward = useCallback((reward: Reward) => {
@@ -466,19 +522,41 @@ export default function FeedScreen() {
           onSpinPress={openDailySpin}
         />
 
-        {/* Streak Strip */}
+        {/* Streak Strip with Hyperstreak Integration */}
         <View style={styles.streakContainer}>
           <StreakStrip
             currentStreak={user?.current_streak ?? 0}
             bestStreak={user?.best_streak ?? 0}
+            hyperProgress={hyperProgress}
+            inHyperstreak={inHyperstreak}
+            shouldPulseHyper={shouldPulseHyper}
+            questionsRemaining={hyperQuestionsRemaining}
           />
         </View>
 
-        {/* Active Multiplier Indicator */}
-        {activeMultiplier > 1 && (
-          <View style={styles.multiplierBadge}>
-            <Text style={styles.multiplierText}>🚀 {activeMultiplier}x</Text>
+        {/* Active Multiplier Indicator - Enhanced during Hyperstreak */}
+        {(activeMultiplier > 1 || inHyperstreak) && (
+          <View style={[
+            styles.multiplierBadge,
+            inHyperstreak && styles.hyperMultiplierBadge,
+          ]}>
+            <Text style={[
+              styles.multiplierText,
+              inHyperstreak && styles.hyperMultiplierText,
+            ]}>
+              {inHyperstreak ? '⚡ HYPER 2x' : `🚀 ${activeMultiplier}x`}
+            </Text>
           </View>
+        )}
+        
+        {/* 2X BLAST Badge - Shows on correct during hyperstreak */}
+        {show2xBlast && inHyperstreak && (
+          <Animated.View 
+            entering={FadeIn.duration(200)}
+            style={styles.blastBadge}
+          >
+            <Text style={styles.blastText}>2X BLAST! 💥</Text>
+          </Animated.View>
         )}
 
         {/* Main Content Area */}
@@ -523,15 +601,21 @@ export default function FeedScreen() {
           />
         )}
 
-        {/* Vote Buttons - Stacked vertically */}
+        {/* Vote Buttons - Stacked vertically, pulse during hyperstreak */}
         {currentQuestion && (
-          <VoteButtons
-            optionA={currentQuestion.option_a}
-            optionB={currentQuestion.option_b}
-            onVote={handleVote}
-            disabled={voteLoading || showingResult}
-            hidden={showingResult}
-          />
+          <View style={inHyperstreak ? styles.hyperButtonsContainer : undefined}>
+            <VoteButtons
+              optionA={currentQuestion.option_a}
+              optionB={currentQuestion.option_b}
+              onVote={handleVote}
+              disabled={voteLoading || showingResult}
+              hidden={showingResult}
+            />
+            {/* Hyperstreak border glow overlay */}
+            {inHyperstreak && !showingResult && (
+              <View style={styles.hyperGlowOverlay} pointerEvents="none" />
+            )}
+          </View>
         )}
 
         {/* User Menu */}
@@ -582,6 +666,19 @@ export default function FeedScreen() {
           visible={showLevelUpModal}
           newLevel={newLevelToShow}
           onClose={handleLevelUpClose}
+        />
+        
+        {/* Hyperstreak Activation Animation */}
+        <HyperstreakActivation
+          visible={showHyperActivation}
+          onComplete={handleHyperActivationComplete}
+        />
+        
+        {/* Hyperstreak Crash Animation */}
+        <HyperstreakCrash
+          visible={showHyperCrash}
+          onComplete={handleHyperCrashComplete}
+          chainToStreakDeath={showDeathModal}
         />
       </SafeAreaView>
 
@@ -699,5 +796,57 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     position: 'relative',
+  },
+  // Hyperstreak styles
+  hyperMultiplierBadge: {
+    backgroundColor: HYPER.COLOR_ACTIVE,
+    borderWidth: 2,
+    borderColor: '#6EE7B7',
+    shadowColor: HYPER.COLOR_ACTIVE,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 12,
+  },
+  hyperMultiplierText: {
+    color: '#000',
+    fontFamily: 'SpaceGrotesk_700Bold',
+    letterSpacing: 1,
+  },
+  blastBadge: {
+    position: 'absolute',
+    top: 160,
+    alignSelf: 'center',
+    backgroundColor: HYPER.COLOR_ACTIVE,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    shadowColor: HYPER.COLOR_ACTIVE,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    zIndex: 100,
+  },
+  blastText: {
+    color: '#000',
+    fontSize: 20,
+    fontFamily: 'Righteous_400Regular',
+    letterSpacing: 2,
+  },
+  hyperButtonsContainer: {
+    position: 'relative',
+  },
+  hyperGlowOverlay: {
+    position: 'absolute',
+    top: -4,
+    left: 12,
+    right: 12,
+    bottom: -4,
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: HYPER.COLOR_ACTIVE,
+    shadowColor: HYPER.COLOR_ACTIVE,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 15,
   },
 });

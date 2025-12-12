@@ -69,6 +69,12 @@ export async function getOrCreateUser(uid: string): Promise<User> {
       // Streak death tracking
       last_dead_streak: data.last_dead_streak ?? null,
       streak_death_date: data.streak_death_date ?? null,
+      // Hyperstreak tracking
+      hyper_bar: data.hyper_bar ?? 0,
+      in_hyperstreak: data.in_hyperstreak ?? false,
+      questions_in_hyper: data.questions_in_hyper ?? 0,
+      hyperstreak_count: data.hyperstreak_count ?? 0,
+      cheat_flag: data.cheat_flag ?? false,
     } as User;
   }
   
@@ -93,6 +99,11 @@ export async function getOrCreateUser(uid: string): Promise<User> {
     // Streak death tracking - defaults
     last_dead_streak: null,
     streak_death_date: null,
+    // Hyperstreak tracking - defaults
+    hyper_bar: 0,
+    in_hyperstreak: false,
+    questions_in_hyper: 0,
+    hyperstreak_count: 0,
   };
   
   await setDoc(userRef, newUser);
@@ -126,6 +137,12 @@ export function subscribeToUser(uid: string, callback: (user: User | null) => vo
         // Streak death tracking
         last_dead_streak: data.last_dead_streak ?? null,
         streak_death_date: data.streak_death_date ?? null,
+        // Hyperstreak tracking
+        hyper_bar: data.hyper_bar ?? 0,
+        in_hyperstreak: data.in_hyperstreak ?? false,
+        questions_in_hyper: data.questions_in_hyper ?? 0,
+        hyperstreak_count: data.hyperstreak_count ?? 0,
+        cheat_flag: data.cheat_flag ?? false,
       } as User);
     } else {
       callback(null);

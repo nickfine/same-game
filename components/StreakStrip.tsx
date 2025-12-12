@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
+import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable, useWindowDimensions, Modal, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import Animated, {
@@ -15,11 +15,18 @@ import Animated, {
 } from 'react-native-reanimated';
 import { COLORS } from '../lib/constants';
 import { DuotoneFlame } from './icons';
+import { HyperBarRing } from './HyperBarRing';
+import { HYPER } from '../lib/hyperstreakLogic';
 
 interface StreakStripProps {
   currentStreak: number;
   bestStreak?: number;
   onPress?: () => void;
+  // Hyperstreak props
+  hyperProgress?: number; // 0-1 progress for hyper bar
+  inHyperstreak?: boolean;
+  shouldPulseHyper?: boolean;
+  questionsRemaining?: number; // Questions left in hyperstreak
 }
 
 // Temperature stages with brand colors: blue → yellow → coral → violet
@@ -129,13 +136,64 @@ function FireParticle({ delay, color }: { delay: number; color: string }) {
   );
 }
 
+// Tooltip component for long-press explanation
+function HyperTooltip({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  if (!visible) return null;
+  
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <TouchableOpacity 
+        style={styles.tooltipOverlay} 
+        activeOpacity={1} 
+        onPress={onClose}
+      >
+        <View style={styles.tooltipContainer}>
+          <Text style={styles.tooltipTitle}>⚡ HYPERSTREAK</Text>
+          <Text style={styles.tooltipText}>
+            Get 10 correct in a row to activate HYPERSTREAK!
+          </Text>
+          <View style={styles.tooltipBonuses}>
+            <Text style={styles.tooltipBonus}>🪙 2x Coins</Text>
+            <Text style={styles.tooltipBonus}>✨ 2x XP</Text>
+            <Text style={styles.tooltipBonus}>🎁 2x Power-ups</Text>
+          </View>
+          <Text style={styles.tooltipDuration}>
+            Lasts for 5 questions or until wrong answer
+          </Text>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
 export function StreakStrip({ 
   currentStreak, 
   bestStreak = 0, 
   onPress,
+  // Hyperstreak props with defaults
+  hyperProgress = 0,
+  inHyperstreak = false,
+  shouldPulseHyper = false,
+  questionsRemaining = 0,
 }: StreakStripProps) {
   const { width } = useWindowDimensions();
   const isSmall = width < 380;
+  const [showTooltip, setShowTooltip] = useState(false);
+  
+  // Long press handler for tooltip
+  const handleLongPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowTooltip(true);
+  }, []);
+  
+  const handleCloseTooltip = useCallback(() => {
+    setShowTooltip(false);
+  }, []);
   
   const stage = useMemo(() => getStreakStage(currentStreak), [currentStreak]);
   const { progress, nextTarget } = useMemo(() => getProgressToNextStage(currentStreak), [currentStreak]);
@@ -325,6 +383,15 @@ export function StreakStrip({
     onPress?.();
   };
   
+  // Override colors when in hyperstreak
+  const effectiveStage = inHyperstreak ? {
+    ...stage,
+    color: HYPER.COLOR_ACTIVE,
+    glowColor: HYPER.COLOR_ACTIVE,
+    bgGradient: ['#0A2E26', '#0F0F1A'] as const,
+    name: 'HYPER MODE!',
+  } : stage;
+  
   // Generate fire particles for hot streaks
   const particles = useMemo(() => {
     if (currentStreak < 5) return [];
@@ -336,14 +403,21 @@ export function StreakStrip({
   }, [currentStreak]);
 
   return (
-    <Pressable onPress={handlePress}>
+    <Pressable 
+      onPress={handlePress}
+      onLongPress={handleLongPress}
+      delayLongPress={500}
+    >
       <Animated.View style={[styles.container, containerStyle]}>
-        {/* Outer glow */}
+        {/* Hyperstreak Tooltip */}
+        <HyperTooltip visible={showTooltip} onClose={handleCloseTooltip} />
+        {/* Outer glow - enhanced during hyperstreak */}
         <Animated.View 
           style={[
             styles.glow, 
             glowStyle,
-            { backgroundColor: stage.glowColor }
+            { backgroundColor: effectiveStage.glowColor },
+            inHyperstreak && styles.hyperGlow,
           ]} 
         />
         
@@ -352,14 +426,14 @@ export function StreakStrip({
           style={[
             styles.flashPulse, 
             pulseStyle,
-            { backgroundColor: stage.color }
+            { backgroundColor: effectiveStage.color }
           ]} 
         />
         
         {/* Main strip body with gradient */}
         <View style={styles.stripBody}>
           <LinearGradient
-            colors={stage.bgGradient}
+            colors={effectiveStage.bgGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={StyleSheet.absoluteFill}
@@ -382,7 +456,7 @@ export function StreakStrip({
           {/* Progress fill */}
           <Animated.View style={[styles.fill, barStyle]}>
             <LinearGradient
-              colors={[stage.color, stage.glowColor]}
+              colors={[effectiveStage.color, effectiveStage.glowColor]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={StyleSheet.absoluteFill}
@@ -399,24 +473,36 @@ export function StreakStrip({
           )}
         </View>
         
-        {/* Border */}
-        <View style={[styles.border, { borderColor: stage.color }]} />
+        {/* Border - glowing emerald during hyperstreak */}
+        <View style={[
+          styles.border, 
+          { borderColor: effectiveStage.color },
+          inHyperstreak && styles.hyperBorder,
+        ]} />
         
-        {/* Left side: Emoji or Flame icon */}
+        {/* Left side: Flame with HyperBarRing */}
         <View style={styles.emojiContainer}>
-          {currentStreak >= 3 ? (
-            <Animated.View style={emojiStyle}>
-              <DuotoneFlame 
-                size={isSmall ? 26 : 32} 
-                primaryColor={stage.color}
-                accentColor={COLORS.gradientCoralEnd}
-              />
-            </Animated.View>
-          ) : (
-            <Animated.Text style={[styles.emoji, emojiStyle, isSmall && styles.emojiSmall]}>
-              {stage.emoji}
-            </Animated.Text>
-          )}
+          <HyperBarRing
+            progress={hyperProgress}
+            isActive={inHyperstreak}
+            shouldPulse={shouldPulseHyper}
+            size={isSmall ? 40 : 48}
+            strokeWidth={3}
+          >
+            {currentStreak >= 3 || inHyperstreak ? (
+              <Animated.View style={emojiStyle}>
+                <DuotoneFlame 
+                  size={isSmall ? 22 : 26} 
+                  primaryColor={inHyperstreak ? HYPER.COLOR_ACTIVE : effectiveStage.color}
+                  accentColor={inHyperstreak ? '#6EE7B7' : COLORS.gradientCoralEnd}
+                />
+              </Animated.View>
+            ) : (
+              <Animated.Text style={[styles.emoji, emojiStyle, isSmall && styles.emojiSmall]}>
+                {effectiveStage.emoji}
+              </Animated.Text>
+            )}
+          </HyperBarRing>
         </View>
         
         {/* Center: Streak count */}
@@ -427,21 +513,34 @@ export function StreakStrip({
           <Text style={[styles.label, isSmall && styles.labelSmall]}>STREAK</Text>
         </View>
         
-        {/* Right side: Stage name & next target */}
+        {/* Right side: Stage name & next target OR Hyper info */}
         <View style={styles.infoContainer}>
-          <Text style={[styles.stageName, { color: stage.color }, isSmall && styles.stageNameSmall]}>
-            {stage.name}
+          <Text style={[
+            styles.stageName, 
+            { color: effectiveStage.color }, 
+            isSmall && styles.stageNameSmall,
+            inHyperstreak && styles.hyperStageName,
+          ]}>
+            {effectiveStage.name}
           </Text>
-          {nextTarget && (
+          {inHyperstreak ? (
+            <Text style={[styles.hyperRemaining, isSmall && styles.nextTargetSmall]}>
+              {questionsRemaining} left • 2x MODE
+            </Text>
+          ) : nextTarget ? (
             <Text style={[styles.nextTarget, isSmall && styles.nextTargetSmall]}>
               {nextTarget - currentStreak} to go
             </Text>
-          )}
+          ) : null}
         </View>
         
-        {/* MAX badge */}
-        {isMaxStage && (
-          <View style={[styles.maxBadge, { backgroundColor: stage.color }]}>
+        {/* MAX badge OR HYPER badge */}
+        {inHyperstreak ? (
+          <View style={[styles.hyperBadge]}>
+            <Text style={styles.hyperBadgeText}>⚡ HYPER</Text>
+          </View>
+        ) : isMaxStage && (
+          <View style={[styles.maxBadge, { backgroundColor: effectiveStage.color }]}>
             <Text style={styles.maxText}>MAX</Text>
           </View>
         )}
@@ -616,6 +715,106 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: 'SpaceGrotesk_700Bold',
     color: '#000',
+  },
+  // Hyperstreak styles
+  hyperGlow: {
+    shadowColor: HYPER.COLOR_ACTIVE,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 20,
+  },
+  hyperBorder: {
+    borderWidth: 3,
+    shadowColor: HYPER.COLOR_ACTIVE,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+  },
+  hyperStageName: {
+    textShadowColor: HYPER.COLOR_ACTIVE,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 15,
+  },
+  hyperRemaining: {
+    fontSize: 10,
+    fontFamily: 'Poppins_600SemiBold',
+    color: HYPER.COLOR_ACTIVE,
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  hyperBadge: {
+    position: 'absolute',
+    top: -10,
+    right: 12,
+    backgroundColor: HYPER.COLOR_ACTIVE,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    shadowColor: HYPER.COLOR_ACTIVE,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+  },
+  hyperBadgeText: {
+    fontSize: 11,
+    fontFamily: 'SpaceGrotesk_700Bold',
+    color: '#000',
+    letterSpacing: 1,
+  },
+  // Tooltip styles
+  tooltipOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  tooltipContainer: {
+    backgroundColor: '#1A0F33',
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 2,
+    borderColor: HYPER.COLOR_CHARGING,
+    maxWidth: 320,
+    alignItems: 'center',
+  },
+  tooltipTitle: {
+    fontSize: 24,
+    fontFamily: 'Righteous_400Regular',
+    color: HYPER.COLOR_ACTIVE,
+    marginBottom: 12,
+    textShadowColor: HYPER.COLOR_ACTIVE,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  tooltipText: {
+    fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 22,
+  },
+  tooltipBonuses: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  tooltipBonus: {
+    fontSize: 12,
+    fontFamily: 'Poppins_600SemiBold',
+    color: HYPER.COLOR_ACTIVE,
+    backgroundColor: 'rgba(0, 255, 189, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  tooltipDuration: {
+    fontSize: 12,
+    fontFamily: 'Poppins_400Regular',
+    color: 'rgba(255, 255, 255, 0.6)',
+    textAlign: 'center',
   },
 });
 

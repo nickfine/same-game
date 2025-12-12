@@ -11,6 +11,16 @@ import * as admin from "firebase-admin";
 
 admin.initializeApp();
 
+// ============================================================================
+// HYPERSTREAK ANTI-CHEAT TRIGGERS
+// Import and re-export hyperstreak validation functions
+// ============================================================================
+export {
+  onHyperstreakUpdate,
+  onHyperstreakActivation,
+  onHyperQuestionsUpdate,
+} from "./hyperstreak.validate";
+
 const db = admin.firestore();
 
 // ============================================================================

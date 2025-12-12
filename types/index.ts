@@ -29,6 +29,15 @@ export interface User {
   // Revival tracking (for analytics)
   ad_revives?: number; // How many times revived via ad
   share_revives?: number; // How many times revived via sharing
+  
+  // Hyperstreak tracking
+  hyper_bar: number; // 0-10 progress toward hyperstreak
+  in_hyperstreak: boolean; // Currently in hyperstreak mode
+  questions_in_hyper: number; // Count of questions answered during hyperstreak (max 5)
+  hyperstreak_count: number; // Total hyperstreaks achieved (analytics)
+  
+  // Anti-cheat flag
+  cheat_flag?: boolean; // Set by Cloud Function if cheating detected
 }
 
 // Compliance/Playtime tracking (separate collection for weekly resets)
