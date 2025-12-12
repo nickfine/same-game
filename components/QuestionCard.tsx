@@ -232,74 +232,7 @@ export function QuestionCard({
           </Animated.View>
         )}
 
-        {/* Vote Result Overlay */}
-        {voteResult && (
-          <Animated.View 
-            entering={FadeIn.duration(200)}
-            style={{ 
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              borderRadius: 24,
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: voteResult.won ? 'rgba(0, 224, 84, 0.95)' : 'rgba(255, 0, 85, 0.95)',
-            }}
-          >
-            {/* Result Text */}
-            <Text 
-              style={{ 
-                fontSize: 56, 
-                color: '#ffffff', 
-                marginBottom: 32,
-                fontFamily: 'Righteous_400Regular', 
-                letterSpacing: 4 
-              }}
-            >
-              {voteResult.won ? 'SAME!' : 'NOPE'}
-            </Text>
-            
-            {/* Percentage Bars */}
-            <View style={{ width: '100%', paddingHorizontal: 32 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ color: '#ffffff', fontSize: 16, fontFamily: 'Poppins_700Bold' }}>
-                  {question.option_a}
-                </Text>
-                <Text style={{ color: '#ffffff', fontSize: 16, fontFamily: 'Poppins_700Bold' }}>
-                  {voteResult.percentage_a}%
-                </Text>
-              </View>
-              <View style={{ height: 16, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 8, overflow: 'hidden', marginBottom: 16 }}>
-                <Animated.View 
-                  style={{ height: '100%', backgroundColor: '#ffffff', borderRadius: 8, width: `${voteResult.percentage_a}%` }}
-                />
-              </View>
-              
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ color: '#ffffff', fontSize: 16, fontFamily: 'Poppins_700Bold' }}>
-                  {question.option_b}
-                </Text>
-                <Text style={{ color: '#ffffff', fontSize: 16, fontFamily: 'Poppins_700Bold' }}>
-                  {voteResult.percentage_b}%
-                </Text>
-              </View>
-              <View style={{ height: 16, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 8, overflow: 'hidden' }}>
-                <Animated.View 
-                  style={{ height: '100%', backgroundColor: '#ffffff', borderRadius: 8, width: `${voteResult.percentage_b}%` }}
-                />
-              </View>
-            </View>
-
-            {/* Share Button */}
-            <ShareButton 
-              question={question} 
-              result={voteResult} 
-              style={{ marginTop: 24 }}
-            />
-          </Animated.View>
-        )}
+        {/* Old result overlay removed - now using full-screen ResultCelebration */}
       </View>
     </Animated.View>
   );

@@ -22,6 +22,7 @@ import { DailySpinWheel } from '../../components/DailySpinWheel';
 import { ComboMultiplier } from '../../components/ComboMultiplier';
 import { StreakDeathModal } from '../../components/StreakDeathModal';
 import { PowerUpBar } from '../../components/PowerUpBar';
+import { ResultCelebration } from '../../components/ResultCelebration';
 import { LevelUpModal } from '../../components/LevelUpModal';
 import { calculateLevel } from '../../lib/levels';
 import { deductUserScore, addUserScore } from '../../lib/firestore';
@@ -84,6 +85,8 @@ export default function FeedScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
   const [comboActive, setComboActive] = useState(false);
+  const [userChoice, setUserChoice] = useState<'a' | 'b' | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
   const [pendingChestReward, setPendingChestReward] = useState<Reward | null>(null);
 
   // Peek data for showing vote percentages
@@ -154,6 +157,7 @@ export default function FeedScreen() {
       return;
     }
     
+    setUserChoice(choice);
     setShowingResult(true);
     setComboActive(true); // Activate combo timer
     const result = await vote(uid, currentQuestion.id, choice);
@@ -161,9 +165,15 @@ export default function FeedScreen() {
     // Check if vote failed due to daily limit
     if (!result && voteError === 'DAILY_LIMIT_REACHED') {
       setShowingResult(false);
+      setUserChoice(null);
       setComboActive(false);
       showDailyVoteLimitModal();
       return;
+    }
+    
+    // Show the celebration screen!
+    if (result) {
+      setShowCelebration(true);
     }
     
     // Check for streak death (loss aversion trigger)
@@ -171,7 +181,7 @@ export default function FeedScreen() {
       // User lost with an active streak - trigger death modal after animation
       setTimeout(() => {
         handleStreakDeath(result.previousStreak);
-      }, 1500); // Show after result animation completes
+      }, 4000); // Show after celebration completes
     }
     
     // Check for mystery chest after vote
@@ -188,6 +198,20 @@ export default function FeedScreen() {
   const handleAnimationComplete = useCallback(() => {
     resetVote();
     setShowingResult(false);
+      setUserChoice(null);
+    // Don't advance to next question if chest is about to show
+    if (!showChest) {
+      nextQuestion();
+    }
+  }, [resetVote, nextQuestion, showChest]);
+
+  // Handle celebration complete
+  const handleCelebrationComplete = useCallback(() => {
+    setShowCelebration(false);
+    setShowingResult(false);
+    setUserChoice(null);
+    resetVote();
+    
     // Don't advance to next question if chest is about to show
     if (!showChest) {
       nextQuestion();
