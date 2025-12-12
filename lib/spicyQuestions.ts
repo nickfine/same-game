@@ -131,3 +131,5 @@ export function getSassyCommentary(winningOption: string, percentage: number): s
   ];
   return close[Math.floor(Math.random() * close.length)];
 }
+
+

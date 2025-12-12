@@ -195,7 +195,8 @@ export default function FeedScreen() {
     }
     
     // Check for streak death (loss aversion trigger)
-    if (result && !result.won && result.previousStreak > 0) {
+    const lostStreak = result && !result.won && result.previousStreak > 0;
+    if (lostStreak) {
       // User lost with an active streak - trigger death modal after animation
       setTimeout(() => {
         handleStreakDeath(result.previousStreak);
@@ -203,9 +204,12 @@ export default function FeedScreen() {
     }
     
     // Check for mystery chest after vote
+    // Only show chest on WINS and when no other important events (like streak death) are happening
     if (result && user) {
-      const shouldShowChest = onVoteComplete(user.votes_cast + 1, result.won);
-      // Chest will show after result animation completes
+      onVoteComplete(user.votes_cast + 1, result.won, {
+        lostStreak: lostStreak ?? false,
+      });
+      // Chest will show after result animation completes (only on wins)
     }
     
     // Clear active power-up effects after vote
@@ -389,13 +393,12 @@ export default function FeedScreen() {
         />
         <SafeAreaView style={{ flex: 1 }}>
           <AppHeader
-            score={user?.score ?? 0}
             level={user?.level ?? calculateLevel(user?.xp ?? 0)}
-            xp={user?.xp ?? 0}
-            streak={user?.current_streak ?? 0}
             rank={userRank}
+            canSpin={canSpin}
             onMenuPress={handleMenuOpen}
             onLevelPress={handleLevelPress}
+            onSpinPress={openDailySpin}
           />
           
           <View style={styles.centerContent}>
@@ -433,22 +436,13 @@ export default function FeedScreen() {
       <SafeAreaView style={{ flex: 1 }}>
         {/* App Header with glassmorphism */}
         <AppHeader
-          score={user?.score ?? 0}
           level={user?.level ?? calculateLevel(user?.xp ?? 0)}
-          xp={user?.xp ?? 0}
-          streak={user?.current_streak ?? 0}
           rank={userRank}
+          canSpin={canSpin}
           onMenuPress={handleMenuOpen}
           onLevelPress={handleLevelPress}
+          onSpinPress={openDailySpin}
         />
-
-        {/* Daily Spin Button - Shows when spin is available */}
-        {canSpin && (
-          <Pressable onPress={openDailySpin} style={styles.spinButton}>
-            <Text style={styles.spinEmoji}>🎰</Text>
-            <Text style={styles.spinText}>SPIN!</Text>
-          </Pressable>
-        )}
 
         {/* Streak Strip */}
         <View style={styles.streakContainer}>
@@ -650,31 +644,6 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     textAlign: 'center',
     fontSize: 16,
-    fontFamily: 'Righteous_400Regular',
-  },
-  spinButton: {
-    position: 'absolute',
-    top: 100,
-    right: 16,
-    backgroundColor: COLORS.secondary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    shadowColor: COLORS.secondary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    zIndex: 10,
-  },
-  spinEmoji: {
-    fontSize: 16,
-  },
-  spinText: {
-    color: '#fff',
-    fontSize: 12,
     fontFamily: 'Righteous_400Regular',
   },
   streakContainer: {

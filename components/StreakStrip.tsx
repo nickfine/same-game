@@ -129,7 +129,11 @@ function FireParticle({ delay, color }: { delay: number; color: string }) {
   );
 }
 
-export function StreakStrip({ currentStreak, bestStreak = 0, onPress }: StreakStripProps) {
+export function StreakStrip({ 
+  currentStreak, 
+  bestStreak = 0, 
+  onPress,
+}: StreakStripProps) {
   const { width } = useWindowDimensions();
   const isSmall = width < 380;
   
@@ -417,7 +421,7 @@ export function StreakStrip({ currentStreak, bestStreak = 0, onPress }: StreakSt
         
         {/* Center: Streak count */}
         <View style={styles.countContainer}>
-          <Animated.Text style={[styles.count, numberStyle, { color: stage.color }, isSmall && styles.countSmall]}>
+          <Animated.Text style={[styles.count, numberStyle, isSmall && styles.countSmall]}>
             {currentStreak}
           </Animated.Text>
           <Text style={[styles.label, isSmall && styles.labelSmall]}>STREAK</Text>
@@ -535,6 +539,8 @@ const styles = StyleSheet.create({
   },
   emoji: {
     fontSize: 28,
+    // Text shadow for contrast against filled progress bar
+    textShadow: '0px 1px 2px rgba(0, 0, 0, 0.5)',
   },
   emojiSmall: {
     fontSize: 22,
@@ -550,6 +556,9 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontFamily: 'SpaceGrotesk_700Bold',
     lineHeight: 26,
+    color: '#FFFFFF',
+    // Strong text shadow for contrast against any fill color
+    textShadow: '0px 1px 4px rgba(0, 0, 0, 0.9), 0px 0px 8px rgba(0, 0, 0, 0.5)',
   },
   countSmall: {
     fontSize: 20,
@@ -558,9 +567,11 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 9,
     fontFamily: 'Poppins_600SemiBold',
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.9)',
     letterSpacing: 1,
     marginTop: -2,
+    // Text shadow for contrast
+    textShadow: '0px 1px 2px rgba(0, 0, 0, 0.7)',
   },
   labelSmall: {
     fontSize: 8,
@@ -577,6 +588,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'SpaceGrotesk_700Bold',
     textTransform: 'uppercase',
+    // Text shadow for contrast against filled progress bar
+    textShadow: '0px 1px 3px rgba(0, 0, 0, 0.8)',
   },
   stageNameSmall: {
     fontSize: 11,
@@ -584,7 +597,9 @@ const styles = StyleSheet.create({
   nextTarget: {
     fontSize: 10,
     fontFamily: 'Poppins_400Regular',
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.85)',
+    // Text shadow for contrast
+    textShadow: '0px 1px 2px rgba(0, 0, 0, 0.7)',
   },
   nextTargetSmall: {
     fontSize: 9,
@@ -603,3 +618,6 @@ const styles = StyleSheet.create({
     color: '#000',
   },
 });
+
+
+

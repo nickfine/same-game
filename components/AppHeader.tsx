@@ -3,84 +3,52 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { 
   useAnimatedStyle, 
-  withSpring,
   useSharedValue,
   withSequence,
   withTiming,
   withRepeat,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { DuotoneFlame, DuotoneMenu } from './icons';
-import { COLORS, GRADIENTS } from '../lib/constants';
+import { DuotoneMenu } from './icons';
+import { COLORS } from '../lib/constants';
 
 interface AppHeaderProps {
-  score: number;
   level?: number;
-  xp?: number;
-  streak?: number;
   rank?: number | null;
+  canSpin?: boolean;
   onMenuPress: () => void;
   onLevelPress?: () => void;
+  onSpinPress?: () => void;
 }
 
 export function AppHeader({ 
-  score, 
   level = 1, 
-  xp = 0, 
-  streak = 0,
   rank,
+  canSpin = false,
   onMenuPress, 
-  onLevelPress 
+  onLevelPress,
+  onSpinPress,
 }: AppHeaderProps) {
-  const scoreScale = useSharedValue(1);
-  const previousScore = useSharedValue(score);
-  const flameScale = useSharedValue(1);
-  const flameRotation = useSharedValue(0);
+  const spinPulse = useSharedValue(1);
 
+  // Animate spin button when available
   useEffect(() => {
-    if (score !== previousScore.value) {
-      scoreScale.value = withSequence(
-        withTiming(1.3, { duration: 100 }),
-        withSpring(1, { damping: 10, stiffness: 200 })
-      );
-      previousScore.value = score;
-    }
-  }, [score]);
-
-  // Animate flame when streak is hot
-  useEffect(() => {
-    if (streak >= 3) {
-      flameScale.value = withRepeat(
+    if (canSpin) {
+      spinPulse.value = withRepeat(
         withSequence(
-          withTiming(1.1, { duration: 300 }),
-          withTiming(1, { duration: 300 })
-        ),
-        -1,
-        true
-      );
-      flameRotation.value = withRepeat(
-        withSequence(
-          withTiming(-5, { duration: 150 }),
-          withTiming(5, { duration: 150 })
+          withTiming(1.1, { duration: 600 }),
+          withTiming(1, { duration: 600 })
         ),
         -1,
         true
       );
     } else {
-      flameScale.value = 1;
-      flameRotation.value = 0;
+      spinPulse.value = 1;
     }
-  }, [streak]);
+  }, [canSpin]);
 
-  const animatedScoreStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scoreScale.value }],
-  }));
-
-  const animatedFlameStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: flameScale.value },
-      { rotate: `${flameRotation.value}deg` },
-    ],
+  const animatedSpinStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: spinPulse.value }],
   }));
 
   const handleMenuPress = () => {
@@ -122,24 +90,16 @@ export function AppHeader({
           </Pressable>
         </View>
 
-        {/* Right side: Streak + Score + Menu */}
+        {/* Right side: Spin + Menu */}
         <View style={styles.rightContainer}>
-          {/* Streak indicator */}
-          {streak > 0 && (
-            <Animated.View style={[styles.streakBadge, animatedFlameStyle]}>
-              <DuotoneFlame 
-                size={16} 
-                primaryColor={streak >= 5 ? COLORS.secondary : COLORS.gradientCoralStart}
-                accentColor={COLORS.gradientCoralEnd}
-              />
-              <Text style={styles.streakText}>{streak}</Text>
-            </Animated.View>
+          {/* Daily Spin Button */}
+          {canSpin && (
+            <Pressable onPress={onSpinPress}>
+              <Animated.View style={[styles.spinBadge, animatedSpinStyle]}>
+                <Text style={styles.spinEmoji}>🎰</Text>
+              </Animated.View>
+            </Pressable>
           )}
-
-          {/* Score Badge */}
-          <Animated.View style={[animatedScoreStyle, styles.scoreBadge]}>
-            <Text style={styles.scoreText}>{score}</Text>
-          </Animated.View>
 
           {/* Menu Button */}
           <Pressable onPress={handleMenuPress} style={styles.menuButton}>
@@ -216,32 +176,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  streakBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 107, 107, 0.2)',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 10,
-    gap: 3,
-  },
-  streakText: {
-    fontFamily: 'Poppins_700Bold',
-    fontSize: 12,
-    color: COLORS.secondary,
-  },
-  scoreBadge: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 10,
+  spinBadge: {
+    backgroundColor: COLORS.secondary,
+    paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    minWidth: 40,
-    alignItems: 'center',
+    shadowColor: COLORS.secondary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
   },
-  scoreText: {
-    fontFamily: 'SpaceGrotesk_700Bold',
-    fontSize: 13,
-    color: COLORS.primaryForeground,
+  spinEmoji: {
+    fontSize: 16,
   },
   menuButton: {
     width: 34,

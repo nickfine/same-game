@@ -58,7 +58,7 @@ interface DopamineState {
 const DEFAULT_STATE: DopamineState = {
   lastSpinDate: null,
   canSpin: true,
-  votesUntilChest: 5, // First chest after 5 votes
+  votesUntilChest: 10, // First chest after 10 votes (matches new 8-15 range)
   lastChestVoteCount: 0,
   powerUps: {
     streak_freeze: 0,
@@ -71,9 +71,9 @@ const DEFAULT_STATE: DopamineState = {
   doubleDownActive: false,
 };
 
-// Chest appears every 5-10 votes (randomized)
-const MIN_VOTES_BETWEEN_CHESTS = 5;
-const MAX_VOTES_BETWEEN_CHESTS = 10;
+// Chest appears every 8-15 votes (randomized) - less frequent to feel more special
+const MIN_VOTES_BETWEEN_CHESTS = 8;
+const MAX_VOTES_BETWEEN_CHESTS = 15;
 
 function getRandomChestInterval(): number {
   return Math.floor(
@@ -129,7 +129,25 @@ export function useDopamineFeatures() {
   };
 
   // Called after each vote to check if chest should appear
-  const onVoteComplete = useCallback((voteCount: number, won: boolean): boolean => {
+  // Options:
+  // - suppressChest: if true, don't show chest even if eligible (e.g., streak death is showing)
+  // - won: if user won the vote (chest only appears on wins to not pile on after losses)
+  interface VoteCompleteOptions {
+    suppressChest?: boolean;
+    lostStreak?: boolean;
+  }
+  
+  const onVoteComplete = useCallback((voteCount: number, won: boolean, options?: VoteCompleteOptions): boolean => {
+    const { suppressChest = false, lostStreak = false } = options || {};
+    
+    // Don't show chest if:
+    // 1. Another important event is happening (suppressed)
+    // 2. User just lost (chest on loss feels bad)
+    // 3. User just lost their streak (streak death modal takes priority)
+    if (suppressChest || !won || lostStreak) {
+      return false;
+    }
+    
     const votesSinceLastChest = voteCount - state.lastChestVoteCount;
     const shouldShowChest = votesSinceLastChest >= state.votesUntilChest;
     

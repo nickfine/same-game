@@ -450,8 +450,9 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontSize: 9,
     fontFamily: 'Poppins_500Medium',
-    color: '#71717a',
+    color: '#52525b',
     marginTop: 2,
+    // Slightly darker for better readability
   },
   maxLevelBadge: {
     backgroundColor: '#F59E0B',
@@ -541,4 +542,6 @@ const compactStyles = StyleSheet.create({
     color: '#fff',
   },
 });
+
+
 

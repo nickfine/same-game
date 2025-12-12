@@ -71,3 +71,5 @@ export function ScreenFlash({ visible, variant, onComplete }: ScreenFlashProps) 
     />
   );
 }
+
+

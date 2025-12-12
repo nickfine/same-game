@@ -67,3 +67,5 @@ export function ConfettiCannon({ shoot, onComplete, variant = 'correct' }: Confe
     </View>
   );
 }
+
+

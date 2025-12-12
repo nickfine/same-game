@@ -540,3 +540,5 @@ export function LevelUpModal({ visible, newLevel, onClose }: LevelUpModalProps) 
   );
 }
 
+
+

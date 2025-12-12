@@ -68,6 +68,8 @@ export function VoteButtons({ optionA, optionB, onVote, disabled, hidden }: Vote
         onPressOut={() => handlePressOut('a')}
         onPress={() => handlePress('a')}
         disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={`Vote for ${optionA}`}
       >
         <LinearGradient
           colors={GRADIENTS.purple}
@@ -92,6 +94,8 @@ export function VoteButtons({ optionA, optionB, onVote, disabled, hidden }: Vote
         onPressOut={() => handlePressOut('b')}
         onPress={() => handlePress('b')}
         disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={`Vote for ${optionB}`}
       >
         <LinearGradient
           colors={GRADIENTS.coral}

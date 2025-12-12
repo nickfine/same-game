@@ -244,7 +244,7 @@ export function ComboMultiplier({ streak, isActive, onComboExpired }: ComboMulti
         </View>
 
         {/* Combo name */}
-        {comboInfo.name && (
+        {comboInfo.name && comboInfo.color && (
           <View style={[styles.comboBadge, { backgroundColor: comboInfo.color + '30' }]}>
             <Text style={[styles.comboName, { color: comboInfo.color }]}>
               {comboInfo.name}
@@ -253,7 +253,7 @@ export function ComboMultiplier({ streak, isActive, onComboExpired }: ComboMulti
         )}
 
         {/* Multiplier */}
-        {comboInfo.multiplier > 1 && (
+        {comboInfo.multiplier > 1 && comboInfo.color && (
           <View style={styles.multiplierBadge}>
             <Text style={[styles.multiplierText, { color: comboInfo.color }]}>
               {comboInfo.multiplier}x

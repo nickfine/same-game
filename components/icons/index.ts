@@ -7,3 +7,5 @@ export { DuotoneDice } from './DuotoneDice';
 export { DuotoneFlame } from './DuotoneFlame';
 export { DuotoneShare } from './DuotoneShare';
 export { DuotoneMenu } from './DuotoneMenu';
+
+
