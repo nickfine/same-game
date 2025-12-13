@@ -142,6 +142,9 @@ export default function FeedScreen() {
   // Track pending streak death to show after result animation
   // Using ref instead of state to avoid closure issues with the morph callback
   const pendingStreakDeathRef = useRef<number | null>(null);
+  
+  // Track if user was in hyperstreak when streak died (for devastating message)
+  const wasInHyperstreakOnDeathRef = useRef<boolean>(false);
 
   // Morph Reveal ref (imperative API)
   const morphRevealRef = useRef<AnswerMorphRevealRef>(null);
@@ -265,6 +268,8 @@ export default function FeedScreen() {
       const lostStreak = !result.won && result.previousStreak > 0;
       if (lostStreak) {
         pendingStreakDeathRef.current = result.previousStreak;
+        // Track if they were in hyperstreak for extra devastation
+        wasInHyperstreakOnDeathRef.current = inHyperstreak;
       }
       
       // Check for mystery chest after vote
@@ -690,6 +695,7 @@ export default function FeedScreen() {
           visible={showDeathModal}
           deadStreak={deadStreak}
           hasStreakFreeze={hasStreakFreeze}
+          wasInHyperstreak={wasInHyperstreakOnDeathRef.current}
           onUseFreeze={handleUseStreakFreeze}
           onWatchAd={handleReviveWithAd}
           onShareRevive={handleReviveWithShare}

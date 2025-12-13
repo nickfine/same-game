@@ -29,6 +29,11 @@ export interface User {
   // Revival tracking (for analytics)
   ad_revives?: number; // How many times revived via ad
   share_revives?: number; // How many times revived via sharing
+  freeze_revives?: number; // How many times revived via freeze
+  total_revives?: number; // Total successful revives (for Phoenix badge)
+  
+  // Friends system
+  friends?: string[]; // Array of friend UIDs
   
   // Hyperstreak tracking
   hyper_bar: number; // 0-10 progress toward hyperstreak
@@ -167,7 +172,8 @@ export type AchievementId =
   | 'score_10'
   | 'score_25'
   | 'score_50'
-  | 'score_100';
+  | 'score_100'
+  | 'phoenix'; // Secret badge: first successful revive
 
 export interface Achievement {
   id: AchievementId;
@@ -175,7 +181,8 @@ export interface Achievement {
   description: string;
   icon: string;
   requirement: number;
-  category: 'voting' | 'winning' | 'creating' | 'streak' | 'score';
+  category: 'voting' | 'winning' | 'creating' | 'streak' | 'score' | 'secret';
+  isSecret?: boolean; // Hidden until unlocked
 }
 
 export interface UserAchievement {

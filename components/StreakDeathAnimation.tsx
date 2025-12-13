@@ -29,6 +29,7 @@ interface StreakDeathAnimationProps {
   visible: boolean;
   deadStreak: number;
   hasStreakFreeze: boolean;
+  wasInHyperstreak?: boolean; // Was user in Hyperstreak when they died?
   onUseFreeze: () => void;
   onWatchAd: () => void;
   onShareRevive: () => void;
@@ -560,6 +561,7 @@ export function StreakDeathAnimation({
   visible,
   deadStreak,
   hasStreakFreeze,
+  wasInHyperstreak = false,
   onUseFreeze,
   onWatchAd,
   onShareRevive,
@@ -653,6 +655,7 @@ export function StreakDeathAnimation({
           visible={showReviveOptions}
           deadStreak={deadStreak}
           hasStreakFreeze={hasStreakFreeze}
+          wasInHyperstreak={wasInHyperstreak}
           onUseFreeze={handleUseFreeze}
           onWatchAd={handleWatchAd}
           onShareToFriends={handleShareRevive}

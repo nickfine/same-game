@@ -22,6 +22,7 @@ interface ReviveOptionsProps {
   visible: boolean;
   deadStreak: number;
   hasStreakFreeze: boolean;
+  wasInHyperstreak?: boolean; // Was user in Hyperstreak when they died?
   onUseFreeze: () => void;
   onWatchAd: () => void;
   onShareToFriends: () => void;
@@ -181,9 +182,10 @@ function OptionCard({
 }
 
 // The main call-to-action text
-function ReviveTitle({ visible }: { visible: boolean }) {
+function ReviveTitle({ visible, wasInHyperstreak }: { visible: boolean; wasInHyperstreak?: boolean }) {
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
+  const hyperTextOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (visible) {
@@ -193,17 +195,31 @@ function ReviveTitle({ visible }: { visible: boolean }) {
         withSpring(1.15, { damping: 8, stiffness: 120 }),
         withTiming(1, { duration: 200 })
       );
+      
+      // Delayed hyperstreak message for extra devastation
+      if (wasInHyperstreak) {
+        hyperTextOpacity.value = withDelay(600, withTiming(1, { duration: 400 }));
+      }
     }
-  }, [visible]);
+  }, [visible, wasInHyperstreak]);
 
   const titleStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
     opacity: opacity.value,
   }));
+  
+  const hyperStyle = useAnimatedStyle(() => ({
+    opacity: hyperTextOpacity.value,
+  }));
 
   return (
     <Animated.View style={[styles.titleContainer, titleStyle]}>
       <Text style={styles.reviveTitle}>BRING IT BACK?</Text>
+      {wasInHyperstreak && (
+        <Animated.Text style={[styles.hyperstreakDeathText, hyperStyle]}>
+          🐍 Your Hyperstreak also crashed… devastating.
+        </Animated.Text>
+      )}
     </Animated.View>
   );
 }
@@ -254,6 +270,7 @@ export function ReviveOptions({
   visible,
   deadStreak,
   hasStreakFreeze,
+  wasInHyperstreak = false,
   onUseFreeze,
   onWatchAd,
   onShareToFriends,
@@ -262,8 +279,8 @@ export function ReviveOptions({
   const backgroundOpacity = useSharedValue(0);
   const [showContent, setShowContent] = useState(false);
 
-  // Generate the share message
-  const shareMessage = `I just lost my ${deadStreak}-day streak on @same_app and I'm spiraling. Save me. 💀🔥`;
+  // Pre-written share message - guaranteed to get opens + revives
+  const shareMessage = `I just lost my ${deadStreak}-day streak on @same_app and I'm in physical pain. Save me. 💀`;
 
   const handleShare = async () => {
     try {
@@ -330,7 +347,7 @@ export function ReviveOptions({
       {/* Content */}
       <View style={styles.container}>
         {/* Main CTA */}
-        <ReviveTitle visible={showContent} />
+        <ReviveTitle visible={showContent} wasInHyperstreak={wasInHyperstreak} />
 
         {/* Option cards */}
         <View style={styles.cardsContainer}>
@@ -398,6 +415,16 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(139, 92, 246, 0.8)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 30,
+  },
+  hyperstreakDeathText: {
+    fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
+    color: '#F97316',
+    textAlign: 'center',
+    marginTop: 12,
+    textShadowColor: 'rgba(249, 115, 22, 0.6)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
   cardsContainer: {
     width: '100%',

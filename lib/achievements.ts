@@ -157,6 +157,17 @@ export const ACHIEVEMENTS: Achievement[] = [
     requirement: 100,
     category: 'score',
   },
+  
+  // Secret badges
+  {
+    id: 'phoenix',
+    name: 'Phoenix',
+    description: 'Rise from the ashes - first successful streak revive',
+    icon: '🔥',
+    requirement: 1,
+    category: 'secret',
+    isSecret: true,
+  },
 ];
 
 // Get achievement by ID
@@ -239,6 +250,13 @@ export function checkAchievements(user: User, unlockedIds: Set<AchievementId>): 
         break;
       case 'score_100':
         earned = user.score >= 100;
+        break;
+        
+      // Secret badges
+      case 'phoenix':
+        // Phoenix badge is granted manually when user first revives
+        // Don't auto-unlock here - handled by streak manager
+        earned = (user.total_revives ?? 0) >= 1;
         break;
     }
 

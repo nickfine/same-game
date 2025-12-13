@@ -2,7 +2,7 @@ import { Audio } from 'expo-av';
 import { Platform } from 'react-native';
 
 // Sound types available in the app
-export type SoundType = 'win' | 'lose' | 'tap' | 'achievement' | 'create' | 'sadTrombone' | 'revive';
+export type SoundType = 'win' | 'lose' | 'tap' | 'achievement' | 'create' | 'sadTrombone' | 'revive' | 'heartbeat';
 
 // Web Audio context for web platform
 let audioContext: AudioContext | null = null;
@@ -217,6 +217,67 @@ function playReviveSoundEffect() {
   }
 }
 
+// Heartbeat sound for countdown - dramatic thump thump
+let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+
+function playHeartbeatSound() {
+  if (Platform.OS === 'web') {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    // Create a deep thump sound
+    const playThump = (delay: number, volume: number) => {
+      setTimeout(() => {
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+        
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        oscillator.type = 'sine';
+        // Start at low frequency and drop lower
+        oscillator.frequency.setValueAtTime(80, ctx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.15);
+        
+        // Low-pass filter for muffled heartbeat
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(200, ctx.currentTime);
+        
+        // Quick attack, medium decay
+        gainNode.gain.setValueAtTime(0, ctx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.02);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+        
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.25);
+      }, delay);
+    };
+
+    // Classic "lub-dub" heartbeat pattern
+    playThump(0, 0.4);      // LUB
+    playThump(120, 0.3);    // DUB (slightly softer)
+  }
+}
+
+// Start continuous heartbeat (call this to begin)
+export function startHeartbeat(): void {
+  stopHeartbeat(); // Clear any existing
+  playHeartbeatSound();
+  heartbeatInterval = setInterval(() => {
+    playHeartbeatSound();
+  }, 800); // ~75 BPM - anxious heartbeat
+}
+
+// Stop heartbeat
+export function stopHeartbeat(): void {
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = null;
+  }
+}
+
 // Exported wrappers for streak death sounds
 export function playSadTrombone(): void {
   try {
@@ -258,6 +319,9 @@ export async function playSound(type: SoundType): Promise<void> {
         break;
       case 'revive':
         playReviveSoundEffect();
+        break;
+      case 'heartbeat':
+        playHeartbeatSound();
         break;
     }
   } catch (error) {

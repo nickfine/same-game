@@ -1,13 +1,29 @@
 import { useState, useCallback, useMemo } from 'react';
-import { doc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, increment, setDoc, collection } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { getTodayDate, daysBetween } from '../lib/dateUtils';
+import { playReviveSound } from '../lib/sounds';
 import type { User } from '../types';
 
 const CRACKED_BADGE_DAYS = 7;
 
 // Revival methods
 export type ReviveMethod = 'freeze' | 'ad' | 'share';
+
+// ═══════════════════════════════════════════════════════════════
+// 🔥 PHOENIX BADGE - Secret badge for first successful revive
+// ═══════════════════════════════════════════════════════════════
+async function grantPhoenixBadge(uid: string): Promise<void> {
+  try {
+    const achievementRef = doc(db, 'users', uid, 'achievements', 'phoenix');
+    await setDoc(achievementRef, {
+      unlocked_at: serverTimestamp(),
+    });
+    console.log('🔥 Phoenix badge granted to user:', uid);
+  } catch (error) {
+    console.error('Failed to grant Phoenix badge:', error);
+  }
+}
 
 interface StreakManagerState {
   showDeathModal: boolean;
@@ -56,10 +72,22 @@ export function useStreakManager(user: User | null, hasStreakFreeze: boolean) {
     try {
       // Restore the streak (will be handled by dopamine hook for freeze consumption)
       const userRef = doc(db, 'users', user.uid);
+      const isFirstRevive = (user.total_revives ?? 0) === 0;
+      
       await updateDoc(userRef, {
         current_streak: state.deadStreak,
         last_active: serverTimestamp(),
+        freeze_revives: increment(1),
+        total_revives: increment(1), // Track for Phoenix badge
       });
+      
+      // 🔥 PHOENIX BADGE - Grant on first successful revive!
+      if (isFirstRevive) {
+        await grantPhoenixBadge(user.uid);
+      }
+      
+      // Play triumphant revive sound!
+      playReviveSound();
 
       setState(prev => ({
         ...prev,
@@ -82,12 +110,23 @@ export function useStreakManager(user: User | null, hasStreakFreeze: boolean) {
     try {
       // Restore the streak without consuming a freeze
       const userRef = doc(db, 'users', user.uid);
+      const isFirstRevive = (user.total_revives ?? 0) === 0;
+      
       await updateDoc(userRef, {
         current_streak: state.deadStreak,
         last_active: serverTimestamp(),
         // Track ad revives for analytics
         ad_revives: increment(1),
+        total_revives: increment(1), // Track for Phoenix badge
       });
+      
+      // 🔥 PHOENIX BADGE - Grant on first successful revive!
+      if (isFirstRevive) {
+        await grantPhoenixBadge(user.uid);
+      }
+      
+      // Play triumphant revive sound!
+      playReviveSound();
 
       setState(prev => ({
         ...prev,
@@ -110,12 +149,23 @@ export function useStreakManager(user: User | null, hasStreakFreeze: boolean) {
     try {
       // Restore the streak
       const userRef = doc(db, 'users', user.uid);
+      const isFirstRevive = (user.total_revives ?? 0) === 0;
+      
       await updateDoc(userRef, {
         current_streak: state.deadStreak,
         last_active: serverTimestamp(),
         // Track share revives for analytics
         share_revives: increment(1),
+        total_revives: increment(1), // Track for Phoenix badge
       });
+      
+      // 🔥 PHOENIX BADGE - Grant on first successful revive!
+      if (isFirstRevive) {
+        await grantPhoenixBadge(user.uid);
+      }
+      
+      // Play triumphant revive sound!
+      playReviveSound();
 
       setState(prev => ({
         ...prev,

@@ -13,11 +13,13 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { COLORS } from '../lib/constants';
+import { playSadTrombone, playReviveSound, startHeartbeat, stopHeartbeat } from '../lib/sounds';
 
 interface StreakDeathModalProps {
   visible: boolean;
   deadStreak: number; // The streak that just died
   hasStreakFreeze: boolean; // Whether user has a freeze available
+  wasInHyperstreak?: boolean; // Was user in Hyperstreak when they died?
   onUseFreeze: () => void;
   onAcceptDeath: () => void;
   onClose: () => void;
@@ -27,6 +29,7 @@ export function StreakDeathModal({
   visible, 
   deadStreak, 
   hasStreakFreeze,
+  wasInHyperstreak = false,
   onUseFreeze, 
   onAcceptDeath,
   onClose,
@@ -60,9 +63,10 @@ export function StreakDeathModal({
         )
       );
       
-      // Screen shake on impact
+      // Screen shake on impact + SAD TROMBONE sound!
       setTimeout(() => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        playSadTrombone(); // 🎺 Wah wah wah waaaaah
         shakeX.value = withSequence(
           withTiming(-10, { duration: 50 }),
           withTiming(10, { duration: 50 }),
@@ -84,8 +88,14 @@ export function StreakDeathModal({
         textOpacity.value = withTiming(1, { duration: 300 });
       }, 700);
       
+      // Start heartbeat sound during countdown to freeze option
+      setTimeout(() => {
+        startHeartbeat(); // 💓 Thump thump...
+      }, 900);
+      
       // Show freeze option after dramatic pause
       setTimeout(() => {
+        stopHeartbeat(); // Stop heartbeat when options appear
         setShowFreezeOption(true);
         if (hasStreakFreeze) {
           freezeButtonScale.value = withSpring(1, { damping: 10 });
@@ -102,6 +112,7 @@ export function StreakDeathModal({
       
     } else {
       // Reset
+      stopHeartbeat(); // Make sure heartbeat stops
       backgroundOpacity.value = 0;
       scytheRotation.value = -45;
       scytheScale.value = 0;
@@ -111,10 +122,17 @@ export function StreakDeathModal({
       pulseGlow.value = 0;
       freezeButtonScale.value = 0;
     }
+    
+    // Cleanup heartbeat on unmount
+    return () => {
+      stopHeartbeat();
+    };
   }, [visible, hasStreakFreeze]);
 
   const handleUseFreeze = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    stopHeartbeat(); // Stop any heartbeat
+    playReviveSound(); // 🎵 Triumphant phoenix rising fanfare!
     
     // Reverse death animation
     scytheRotation.value = withTiming(-90, { duration: 300 });
@@ -207,6 +225,13 @@ export function StreakDeathModal({
                   ? "So close to greatness..."
                   : "Back to zero."}
             </Text>
+            
+            {/* Hyperstreak tie-in - extra devastating */}
+            {wasInHyperstreak && (
+              <Text style={styles.hyperstreakDeathText}>
+                🐍 Your Hyperstreak also crashed… devastating.
+              </Text>
+            )}
           </Animated.View>
 
           {/* Action Buttons */}
@@ -336,6 +361,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
     color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
+  },
+  hyperstreakDeathText: {
+    fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
+    color: '#F97316',
+    textAlign: 'center',
+    marginTop: 16,
+    textShadowColor: 'rgba(249, 115, 22, 0.6)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
   actionsContainer: {
     width: '100%',

@@ -84,6 +84,10 @@ function AchievementBadge({
   unlocked: boolean;
   delay: number;
 }) {
+  // Secret badges are hidden until unlocked
+  const isSecret = achievement.isSecret;
+  if (isSecret && !unlocked) return null;
+  
   return (
     <Animated.View
       entering={FadeInDown.delay(delay).springify()}
@@ -99,10 +103,16 @@ function AchievementBadge({
           width: 56,
           height: 56,
           borderRadius: 28,
-          backgroundColor: unlocked ? '#F59E0B' : '#e4e4e7',
+          backgroundColor: unlocked ? (isSecret ? '#F97316' : '#F59E0B') : '#e4e4e7',
           justifyContent: 'center',
           alignItems: 'center',
           marginBottom: 8,
+          ...(isSecret && unlocked && {
+            shadowColor: '#F97316',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.6,
+            shadowRadius: 12,
+          }),
         }}
       >
         <Text style={{ fontSize: 28 }}>{achievement.icon}</Text>
@@ -111,25 +121,110 @@ function AchievementBadge({
         style={{
           fontFamily: 'Poppins_700Bold',
           fontSize: 11,
-          color: unlocked ? '#18181b' : '#a1a1aa',
+          color: unlocked ? (isSecret ? '#F97316' : '#18181b') : '#a1a1aa',
           textAlign: 'center',
         }}
         numberOfLines={2}
       >
         {achievement.name}
       </Text>
+      {isSecret && unlocked && (
+        <Text
+          style={{
+            fontFamily: 'Poppins_400Regular',
+            fontSize: 9,
+            color: '#F97316',
+            marginTop: 2,
+          }}
+        >
+          SECRET
+        </Text>
+      )}
+    </Animated.View>
+  );
+}
+
+// 🔥 Phoenix Badge Hero - Shows prominently when user has it
+function PhoenixBadgeHero({ hasPhoenix }: { hasPhoenix: boolean }) {
+  if (!hasPhoenix) return null;
+  
+  return (
+    <Animated.View
+      entering={FadeInDown.delay(50).springify()}
+      style={{
+        backgroundColor: '#1C1917',
+        borderRadius: 20,
+        padding: 20,
+        marginBottom: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#F97316',
+        shadowColor: '#F97316',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.4,
+        shadowRadius: 16,
+      }}
+    >
+      <View
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: 32,
+          backgroundColor: '#F97316',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginRight: 16,
+        }}
+      >
+        <Text style={{ fontSize: 36 }}>🔥</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text
+          style={{
+            fontFamily: 'Righteous_400Regular',
+            fontSize: 20,
+            color: '#F97316',
+          }}
+        >
+          PHOENIX
+        </Text>
+        <Text
+          style={{
+            fontFamily: 'Poppins_400Regular',
+            fontSize: 12,
+            color: 'rgba(255,255,255,0.7)',
+            marginTop: 2,
+          }}
+        >
+          Rose from the ashes 🔥
+        </Text>
+        <Text
+          style={{
+            fontFamily: 'Poppins_500Medium',
+            fontSize: 10,
+            color: '#F97316',
+            marginTop: 4,
+          }}
+        >
+          SECRET BADGE
+        </Text>
+      </View>
     </Animated.View>
   );
 }
 
 export default function ProfileScreen() {
   const { user, uid } = useAuth();
-  const { achievements, unlockedCount, totalCount } = useAchievements(uid, user);
+  const { achievements, unlockedCount, totalCount, unlocked } = useAchievements(uid, user);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
   
   const stats = user ? getUserStats(user) : null;
+  
+  // Check if user has unlocked the secret Phoenix badge
+  const hasPhoenixBadge = unlocked.has('phoenix');
 
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -302,6 +397,9 @@ export default function ProfileScreen() {
             </>
           )}
         </Animated.View>
+
+        {/* 🔥 Phoenix Badge Hero - Shows if user has it */}
+        <PhoenixBadgeHero hasPhoenix={hasPhoenixBadge} />
 
         {/* Level Hero Section */}
         <Animated.View

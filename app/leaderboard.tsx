@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -16,6 +16,72 @@ const MEDAL_COLORS = {
   2: { bg: '#C0C0C0', text: '#374151', emoji: '🥈' }, // Silver
   3: { bg: '#CD7F32', text: '#451A03', emoji: '🥉' }, // Bronze
 };
+
+// ═══════════════════════════════════════════════════════════════
+// HYPER SERPENT INDICATOR - Shows when user is in Hyperstreak
+// ═══════════════════════════════════════════════════════════════
+function HyperSerpent({ isActive }: { isActive: boolean }) {
+  if (!isActive) return null;
+  
+  return (
+    <View style={styles.hyperSerpent}>
+      <Text style={styles.hyperSerpentEmoji}>🐍</Text>
+    </View>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB SWITCHER - Global vs Friends
+// ═══════════════════════════════════════════════════════════════
+function TabSwitcher({ 
+  activeTab, 
+  onTabChange,
+  hasFriends,
+}: { 
+  activeTab: 'global' | 'friends'; 
+  onTabChange: (tab: 'global' | 'friends') => void;
+  hasFriends: boolean;
+}) {
+  return (
+    <View style={styles.tabContainer}>
+      <Pressable
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onTabChange('global');
+        }}
+        style={[
+          styles.tab,
+          activeTab === 'global' && styles.tabActive,
+        ]}
+      >
+        <Text style={[
+          styles.tabText,
+          activeTab === 'global' && styles.tabTextActive,
+        ]}>
+          🌍 Global
+        </Text>
+      </Pressable>
+      
+      <Pressable
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onTabChange('friends');
+        }}
+        style={[
+          styles.tab,
+          activeTab === 'friends' && styles.tabActive,
+        ]}
+      >
+        <Text style={[
+          styles.tabText,
+          activeTab === 'friends' && styles.tabTextActive,
+        ]}>
+          👥 Friends {!hasFriends && '(0)'}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
 
 // Podium component for top 3
 function Podium({ entries, currentUid }: { entries: LeaderboardEntry[]; currentUid: string | null }) {
@@ -41,8 +107,15 @@ function Podium({ entries, currentUid }: { entries: LeaderboardEntry[]; currentU
                 width: '100%',
                 alignItems: 'center',
                 minHeight: 100,
+                position: 'relative',
               }}
             >
+              {/* Hyper Serpent indicator */}
+              {second.in_hyperstreak && (
+                <View style={styles.podiumHyper}>
+                  <Text>🐍</Text>
+                </View>
+              )}
               <Text
                 style={{
                   fontFamily: 'Poppins_700Bold',
@@ -71,7 +144,7 @@ function Podium({ entries, currentUid }: { entries: LeaderboardEntry[]; currentU
                   color: second.uid === currentUid ? 'rgba(255,255,255,0.8)' : '#6B7280',
                 }}
               >
-                {second.win_rate}% win
+                🔥 {second.current_streak}
               </Text>
             </View>
           </Animated.View>
@@ -97,8 +170,15 @@ function Podium({ entries, currentUid }: { entries: LeaderboardEntry[]; currentU
                 shadowOpacity: 0.4,
                 shadowRadius: 12,
                 elevation: 8,
+                position: 'relative',
               }}
             >
+              {/* Hyper Serpent indicator */}
+              {first.in_hyperstreak && (
+                <View style={[styles.podiumHyper, { right: 8, top: 8 }]}>
+                  <Text style={{ fontSize: 18 }}>🐍</Text>
+                </View>
+              )}
               <Text
                 style={{
                   fontFamily: 'Poppins_700Bold',
@@ -127,7 +207,7 @@ function Podium({ entries, currentUid }: { entries: LeaderboardEntry[]; currentU
                   color: first.uid === currentUid ? 'rgba(255,255,255,0.8)' : '#92400E',
                 }}
               >
-                {first.win_rate}% win rate
+                🔥 {first.current_streak} streak
               </Text>
             </View>
           </Animated.View>
@@ -148,8 +228,15 @@ function Podium({ entries, currentUid }: { entries: LeaderboardEntry[]; currentU
                 width: '100%',
                 alignItems: 'center',
                 minHeight: 80,
+                position: 'relative',
               }}
             >
+              {/* Hyper Serpent indicator */}
+              {third.in_hyperstreak && (
+                <View style={styles.podiumHyper}>
+                  <Text>🐍</Text>
+                </View>
+              )}
               <Text
                 style={{
                   fontFamily: 'Poppins_700Bold',
@@ -178,7 +265,7 @@ function Podium({ entries, currentUid }: { entries: LeaderboardEntry[]; currentU
                   color: third.uid === currentUid ? 'rgba(255,255,255,0.8)' : '#78350F',
                 }}
               >
-                {third.win_rate}% win
+                🔥 {third.current_streak}
               </Text>
             </View>
           </Animated.View>
@@ -193,25 +280,27 @@ function LeaderboardRow({
   entry,
   isCurrentUser,
   index,
+  isFriendsTab = false,
 }: {
   entry: LeaderboardEntry;
   isCurrentUser: boolean;
   index: number;
+  isFriendsTab?: boolean;
 }) {
+  const isPlaceholder = entry.uid.startsWith('placeholder_');
+  
   return (
     <Animated.View
       entering={FadeInDown.delay(index * 30).springify()}
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: isCurrentUser ? '#6366F1' : '#ffffff',
-        borderRadius: 12,
-        padding: 12,
-        marginBottom: 8,
-        marginHorizontal: 20,
-        borderWidth: isCurrentUser ? 0 : 1,
-        borderColor: '#f4f4f5',
-      }}
+      style={[
+        styles.leaderboardRow,
+        {
+          backgroundColor: isCurrentUser ? '#6366F1' : isPlaceholder ? '#F3E8FF' : '#ffffff',
+          borderWidth: isCurrentUser ? 0 : isPlaceholder ? 2 : 1,
+          borderColor: isPlaceholder ? '#A855F7' : '#f4f4f5',
+          borderStyle: isPlaceholder ? 'dashed' : 'solid',
+        },
+      ]}
     >
       {/* Rank */}
       <View
@@ -232,13 +321,22 @@ function LeaderboardRow({
             color: isCurrentUser ? '#fff' : '#71717a',
           }}
         >
-          {entry.rank}
+          {isPlaceholder ? '?' : entry.rank}
         </Text>
       </View>
 
-      {/* Level Badge */}
-      <View style={{ marginRight: 10 }}>
-        <LevelBadgeInline level={entry.level ?? 1} size="small" />
+      {/* Avatar / Level Badge */}
+      <View style={{ marginRight: 10, position: 'relative' }}>
+        {isFriendsTab && entry.avatar_emoji ? (
+          <View style={styles.avatarContainer}>
+            <Text style={{ fontSize: 20 }}>{entry.avatar_emoji}</Text>
+          </View>
+        ) : (
+          <LevelBadgeInline level={entry.level ?? 1} size="small" />
+        )}
+        
+        {/* 🐍 Hyper Serpent indicator */}
+        {entry.in_hyperstreak && <HyperSerpent isActive={true} />}
       </View>
 
       {/* Name & Stats */}
@@ -247,52 +345,89 @@ function LeaderboardRow({
           style={{
             fontFamily: 'Poppins_700Bold',
             fontSize: 15,
-            color: isCurrentUser ? '#fff' : '#18181b',
+            color: isCurrentUser ? '#fff' : isPlaceholder ? '#7C3AED' : '#18181b',
           }}
           numberOfLines={1}
         >
           {entry.display_name}
           {isCurrentUser && ' (You)'}
         </Text>
-        <Text
-          style={{
-            fontFamily: 'Poppins_400Regular',
-            fontSize: 12,
-            color: isCurrentUser ? 'rgba(255,255,255,0.7)' : '#71717a',
-          }}
-        >
-          {entry.votes_won} wins • {entry.win_rate}% rate • 🔥 {entry.best_streak}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text
+            style={{
+              fontFamily: 'Poppins_400Regular',
+              fontSize: 12,
+              color: isCurrentUser ? 'rgba(255,255,255,0.7)' : '#71717a',
+            }}
+          >
+            {isPlaceholder ? 'Invite friends to compete!' : `🔥 ${entry.current_streak} streak • Best: ${entry.best_streak}`}
+          </Text>
+        </View>
       </View>
 
       {/* Score */}
-      <View style={{ alignItems: 'flex-end' }}>
-        <Text
-          style={{
-            fontFamily: 'Righteous_400Regular',
-            fontSize: 20,
-            color: isCurrentUser ? '#fff' : '#18181b',
-          }}
-        >
-          {entry.score}
-        </Text>
-        <Text
-          style={{
-            fontFamily: 'Poppins_400Regular',
-            fontSize: 11,
-            color: isCurrentUser ? 'rgba(255,255,255,0.7)' : '#a1a1aa',
-          }}
-        >
-          pts
+      {!isPlaceholder && (
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text
+            style={{
+              fontFamily: 'Righteous_400Regular',
+              fontSize: 20,
+              color: isCurrentUser ? '#fff' : '#18181b',
+            }}
+          >
+            {entry.score}
+          </Text>
+          <Text
+            style={{
+              fontFamily: 'Poppins_400Regular',
+              fontSize: 11,
+              color: isCurrentUser ? 'rgba(255,255,255,0.7)' : '#a1a1aa',
+            }}
+          >
+            pts
+          </Text>
+        </View>
+      )}
+    </Animated.View>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FRIENDS EMPTY STATE - Encourages social sharing
+// ═══════════════════════════════════════════════════════════════
+function FriendsEmptyState() {
+  return (
+    <View style={styles.emptyState}>
+      <Text style={{ fontSize: 64, marginBottom: 16 }}>👥</Text>
+      <Text style={styles.emptyStateTitle}>
+        Add Friends to Compete!
+      </Text>
+      <Text style={styles.emptyStateText}>
+        Share the app with friends to see their live streaks and Hyperstreaks here.
+      </Text>
+      <View style={styles.emptyStateHint}>
+        <Text style={{ fontSize: 20, marginRight: 8 }}>🐍</Text>
+        <Text style={styles.emptyStateHintText}>
+          See who's in Hyperstreak mode and crush them!
         </Text>
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
 export default function LeaderboardScreen() {
   const { uid } = useAuth();
-  const { leaderboard, userRank, loading, error, refresh } = useLeaderboard(uid);
+  const { 
+    leaderboard, 
+    friendsLeaderboard, 
+    userRank, 
+    loading, 
+    error, 
+    activeTab, 
+    setActiveTab,
+    refresh,
+    hasFriends,
+  } = useLeaderboard(uid);
 
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -304,9 +439,10 @@ export default function LeaderboardScreen() {
     refresh();
   };
 
-  // Separate top 3 from rest
-  const top3 = leaderboard.slice(0, 3);
-  const rest = leaderboard.slice(3);
+  // Choose data based on active tab
+  const currentData = activeTab === 'global' ? leaderboard : friendsLeaderboard;
+  const top3 = currentData.slice(0, 3);
+  const rest = currentData.slice(3);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f4f5' }}>
@@ -354,8 +490,15 @@ export default function LeaderboardScreen() {
         </Pressable>
       </View>
 
+      {/* Tab Switcher */}
+      <TabSwitcher 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab}
+        hasFriends={hasFriends}
+      />
+
       {/* Your Rank Badge */}
-      {userRank && (
+      {userRank && activeTab === 'global' && (
         <Animated.View
           entering={FadeInDown.delay(0).springify()}
           style={{
@@ -447,30 +590,34 @@ export default function LeaderboardScreen() {
             </Text>
           </Pressable>
         </View>
-      ) : leaderboard.length === 0 ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <Text style={{ fontSize: 48, marginBottom: 16 }}>🏆</Text>
-          <Text
-            style={{
-              fontFamily: 'Righteous_400Regular',
-              fontSize: 24,
-              color: '#18181b',
-              marginBottom: 8,
-            }}
-          >
-            No Players Yet
-          </Text>
-          <Text
-            style={{
-              fontFamily: 'Poppins_400Regular',
-              fontSize: 14,
-              color: '#71717a',
-              textAlign: 'center',
-            }}
-          >
-            Be the first to climb the leaderboard!
-          </Text>
-        </View>
+      ) : currentData.length === 0 ? (
+        activeTab === 'friends' ? (
+          <FriendsEmptyState />
+        ) : (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+            <Text style={{ fontSize: 48, marginBottom: 16 }}>🏆</Text>
+            <Text
+              style={{
+                fontFamily: 'Righteous_400Regular',
+                fontSize: 24,
+                color: '#18181b',
+                marginBottom: 8,
+              }}
+            >
+              No Players Yet
+            </Text>
+            <Text
+              style={{
+                fontFamily: 'Poppins_400Regular',
+                fontSize: 14,
+                color: '#71717a',
+                textAlign: 'center',
+              }}
+            >
+              Be the first to climb the leaderboard!
+            </Text>
+          </View>
+        )
       ) : (
         <FlatList
           data={rest}
@@ -483,6 +630,7 @@ export default function LeaderboardScreen() {
               entry={item}
               isCurrentUser={item.uid === uid}
               index={index}
+              isFriendsTab={activeTab === 'friends'}
             />
           )}
           contentContainerStyle={{ paddingBottom: 20 }}
@@ -493,3 +641,110 @@ export default function LeaderboardScreen() {
   );
 }
 
+const styles = StyleSheet.create({
+  tabContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: '#e4e4e7',
+    borderRadius: 12,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  tabActive: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tabText: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 14,
+    color: '#71717a',
+  },
+  tabTextActive: {
+    color: '#18181b',
+  },
+  leaderboardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    marginHorizontal: 20,
+  },
+  avatarContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f4f4f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  hyperSerpent: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#F97316',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#F97316',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+  },
+  hyperSerpentEmoji: {
+    fontSize: 10,
+  },
+  podiumHyper: {
+    position: 'absolute',
+    right: 6,
+    top: 6,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyStateTitle: {
+    fontFamily: 'Righteous_400Regular',
+    fontSize: 24,
+    color: '#18181b',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 14,
+    color: '#71717a',
+    textAlign: 'center',
+    marginBottom: 24,
+    maxWidth: 280,
+  },
+  emptyStateHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    maxWidth: 300,
+  },
+  emptyStateHintText: {
+    flex: 1,
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 13,
+    color: '#92400E',
+  },
+});
