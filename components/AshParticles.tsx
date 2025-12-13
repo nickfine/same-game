@@ -178,7 +178,7 @@ export function AshParticles({
   if (!active) return null;
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
       {/* Embers (glowing orange bits) */}
       {embers.map(ember => (
         <Ember

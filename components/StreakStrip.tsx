@@ -638,8 +638,6 @@ const styles = StyleSheet.create({
   },
   emoji: {
     fontSize: 28,
-    // Text shadow for contrast against filled progress bar
-    textShadow: '0px 1px 2px rgba(0, 0, 0, 0.5)',
   },
   emojiSmall: {
     fontSize: 22,
@@ -656,8 +654,6 @@ const styles = StyleSheet.create({
     fontFamily: 'SpaceGrotesk_700Bold',
     lineHeight: 26,
     color: '#FFFFFF',
-    // Strong text shadow for contrast against any fill color
-    textShadow: '0px 1px 4px rgba(0, 0, 0, 0.9), 0px 0px 8px rgba(0, 0, 0, 0.5)',
   },
   countSmall: {
     fontSize: 20,
@@ -670,7 +666,9 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginTop: -2,
     // Text shadow for contrast
-    textShadow: '0px 1px 2px rgba(0, 0, 0, 0.7)',
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   labelSmall: {
     fontSize: 8,
@@ -688,7 +686,9 @@ const styles = StyleSheet.create({
     fontFamily: 'SpaceGrotesk_700Bold',
     textTransform: 'uppercase',
     // Text shadow for contrast against filled progress bar
-    textShadow: '0px 1px 3px rgba(0, 0, 0, 0.8)',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   stageNameSmall: {
     fontSize: 11,
@@ -698,7 +698,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
     color: 'rgba(255,255,255,0.85)',
     // Text shadow for contrast
-    textShadow: '0px 1px 2px rgba(0, 0, 0, 0.7)',
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   nextTargetSmall: {
     fontSize: 9,

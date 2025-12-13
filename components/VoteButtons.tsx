@@ -111,14 +111,17 @@ export function VoteButtons({
   }, [hidden, optionA, optionB]);
 
   // ═══════════════════════════════════════════════════════════════
-  // CONTINUOUS PULSE (faster in hyperstreak)
+  // CONTINUOUS PULSE (2x faster in hyperstreak for extra energy)
   // ═══════════════════════════════════════════════════════════════
   useEffect(() => {
+    // Hyperstreak: 2x speed pulse (250ms vs 500ms)
     const duration = inHyperstreak ? 250 : 500;
+    // Hyperstreak: slightly larger pulse
+    const pulseScale = inHyperstreak ? 1.018 : 1.012;
     
     pulseA.value = withRepeat(
       withSequence(
-        withTiming(1.012, { duration, easing: Easing.inOut(Easing.ease) }),
+        withTiming(pulseScale, { duration, easing: Easing.inOut(Easing.ease) }),
         withTiming(1.0, { duration, easing: Easing.inOut(Easing.ease) })
       ),
       -1,
@@ -127,7 +130,7 @@ export function VoteButtons({
     
     pulseB.value = withDelay(duration / 2, withRepeat(
       withSequence(
-        withTiming(1.012, { duration, easing: Easing.inOut(Easing.ease) }),
+        withTiming(pulseScale, { duration, easing: Easing.inOut(Easing.ease) }),
         withTiming(1.0, { duration, easing: Easing.inOut(Easing.ease) })
       ),
       -1,
@@ -382,7 +385,7 @@ export function VoteButtons({
       
       {/* Hyperstreak Glow Border Overlay */}
       {inHyperstreak && !hidden && (
-        <View style={styles.hyperOverlay} pointerEvents="none">
+        <View style={[styles.hyperOverlay, { pointerEvents: 'none' }]}>
           <View style={styles.hyperBorder} />
         </View>
       )}
@@ -499,10 +502,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Poppins_700Bold',
   },
-  // Hyperstreak styles
+  // Hyperstreak styles - enhanced emerald glow
   hyperGlow: {
     borderWidth: 3,
     borderColor: COLORS.accent,
+    shadowColor: COLORS.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 16,
   },
   hyperOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -515,7 +522,8 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     shadowColor: COLORS.accent,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 28,
+    shadowOpacity: 1,
+    shadowRadius: 32,
+    elevation: 16,
   },
 });

@@ -281,7 +281,7 @@ export function LevelUpModal({ visible, newLevel, onClose }: LevelUpModalProps) 
       statusBarTranslucent
     >
       {/* Confetti layer */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
         {visible && confettiParticles.map((particle) => (
           <ConfettiParticle key={particle.id} {...particle} />
         ))}

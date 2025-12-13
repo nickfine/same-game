@@ -30,6 +30,9 @@ import { ConfettiCannon } from '../../components/ConfettiCannon';
 import { ScreenFlash } from '../../components/ScreenFlash';
 import { HyperstreakActivation } from '../../components/HyperstreakActivation';
 import { HyperstreakCrash } from '../../components/HyperstreakCrash';
+import { HotTakeBadge } from '../../components/HotTakeBadge';
+import { HotTakeShareCard } from '../../components/HotTakeShareCard';
+import { useDailyHotTake } from '../../hooks/useDailyHotTake';
 import { calculateLevel } from '../../lib/levels';
 import { HYPER } from '../../lib/hyperstreakLogic';
 import { deductUserScore, addUserScore } from '../../lib/firestore';
@@ -109,6 +112,18 @@ export default function FeedScreen() {
     acceptStreakDeath,
     closeDeathModal,
   } = useStreakManager(user, hasStreakFreeze);
+  
+  // Daily Hot Take system
+  const {
+    hotTakeQuestion,
+    hotTakeQuestionId,
+    isHotTake,
+    hotTakeResult,
+    showHotTakeShareModal,
+    checkHotTakeResult,
+    dismissShareModal,
+    generateShareMessage,
+  } = useDailyHotTake();
   
   // ═══════════════════════════════════════════════════════════════
   // STATE
@@ -259,11 +274,16 @@ export default function FeedScreen() {
         });
       }
       
+      // Check if this was a hot take question
+      if (currentQuestion && isHotTake(currentQuestion.id)) {
+        checkHotTakeResult(result, choice, currentQuestion.id);
+      }
+      
       // Clear active power-up effects
       clearActiveEffects();
       setPeekData(null);
     }
-  }, [uid, currentQuestion, vote, voteLoading, showingResult, canVote, showDailyVoteLimitModal, voteError, user, onVoteComplete, inHyperstreak, doubleDownActive, clearActiveEffects, incrementHyperBar, tickHyperQuestion, crashHyperstreak]);
+  }, [uid, currentQuestion, vote, voteLoading, showingResult, canVote, showDailyVoteLimitModal, voteError, user, onVoteComplete, inHyperstreak, doubleDownActive, clearActiveEffects, incrementHyperBar, tickHyperQuestion, crashHyperstreak, isHotTake, checkHotTakeResult]);
 
   // ═══════════════════════════════════════════════════════════════
   // MORPH COMPLETE - Called when reveal animation finishes
@@ -576,6 +596,13 @@ export default function FeedScreen() {
         ═══════════════════════════════════════════════════════════ */}
         {currentQuestion && (
           <View style={styles.heroButtonsSection}>
+            {/* Hot Take Badge - shows when this is today's hot take */}
+            {isHotTake(currentQuestion.id) && !showingResult && (
+              <View style={styles.hotTakeBadgeContainer}>
+                <HotTakeBadge visible={true} size="small" />
+              </View>
+            )}
+            
             <VoteButtons
               optionA={currentQuestion.optionA}
               optionB={currentQuestion.optionB}
@@ -618,6 +645,8 @@ export default function FeedScreen() {
           ref={morphRevealRef}
           optionA={currentQuestion?.optionA ?? ''}
           optionB={currentQuestion?.optionB ?? ''}
+          emojiA={currentQuestion?.emojiA}
+          emojiB={currentQuestion?.emojiB}
           onComplete={handleMorphComplete}
         />
 
@@ -687,6 +716,22 @@ export default function FeedScreen() {
           onComplete={handleHyperCrashComplete}
           chainToStreakDeath={showDeathModal}
         />
+        
+        {/* Hot Take Share Card - shows after winning hot take */}
+        {hotTakeResult && currentQuestion && (
+          <HotTakeShareCard
+            visible={showHotTakeShareModal}
+            optionA={currentQuestion.optionA}
+            optionB={currentQuestion.optionB}
+            emojiA={currentQuestion.emojiA}
+            emojiB={currentQuestion.emojiB}
+            userChoice={hotTakeResult.userChoice}
+            userPercent={hotTakeResult.userPercent}
+            shareMessage={generateShareMessage()}
+            onShare={dismissShareModal}
+            onDismiss={dismissShareModal}
+          />
+        )}
       </SafeAreaView>
 
       {/* Visual Feedback Overlays */}
@@ -787,6 +832,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 0,
     marginTop: 8,
     marginBottom: 12,
+  },
+  hotTakeBadgeContainer: {
+    position: 'absolute',
+    top: -32,
+    alignSelf: 'center',
+    zIndex: 10,
   },
   powerUpSection: {
     // ~10% of screen (56px fixed)

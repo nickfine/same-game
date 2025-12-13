@@ -540,6 +540,7 @@ export async function getLeaderboard(limitCount: number = 50): Promise<Leaderboa
       votes_cast: votesCast,
       win_rate: winRate,
       best_streak: data.best_streak ?? 0,
+      current_streak: data.current_streak ?? 0,
       rank: index + 1,
     };
   });

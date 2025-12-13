@@ -9,6 +9,7 @@ import Animated, {
   useDerivedValue,
   runOnJS,
   Easing,
+  SharedValue,
 } from 'react-native-reanimated';
 
 interface PercentageBarProps {
@@ -107,7 +108,7 @@ export function PercentageBar({
   );
 }
 
-function AnimatedPercentage({ value, isWinner }: { value: Animated.SharedValue<number>; isWinner: boolean }) {
+function AnimatedPercentage({ value, isWinner }: { value: SharedValue<number>; isWinner: boolean }) {
   const [displayValue, setDisplayValue] = React.useState(0);
   
   useDerivedValue(() => {

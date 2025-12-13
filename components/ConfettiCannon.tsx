@@ -52,7 +52,7 @@ export function ConfettiCannon({ shoot, onComplete, variant = 'correct' }: Confe
   const explosionSpeed = variant === 'milestone' ? 500 : 350;
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
       <ConfettiCannonLib
         ref={confettiRef}
         count={count}

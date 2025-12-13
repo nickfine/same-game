@@ -64,10 +64,10 @@ export function ScreenFlash({ visible, variant, onComplete }: ScreenFlashProps) 
         {
           backgroundColor: color,
           zIndex: 100,
+          pointerEvents: 'none',
         },
         animatedStyle,
       ]}
-      pointerEvents="none"
     />
   );
 }

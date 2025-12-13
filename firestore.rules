@@ -108,5 +108,18 @@ service cloud.firestore {
       allow write: if false; // Only Cloud Functions
     }
     
+    // =======================================================================
+    // DAILY HOT TAKES COLLECTION
+    // One document per day, same hot take question for all users
+    // Read by all authenticated users
+    // Only Cloud Functions/Admin can write
+    // =======================================================================
+    match /daily_hot_takes/{date} {
+      allow read: if request.auth != null;
+      // In dev mode, allow client writes for seeding
+      // In production, only Cloud Functions (Admin SDK) should write
+      allow write: if request.auth != null;
+    }
+    
   }
 }

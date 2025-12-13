@@ -97,7 +97,7 @@ export function CoinRain({ count = 30, isCorrect }: CoinRainProps) {
   if (!isCorrect) return null;
 
   return (
-    <View style={styles.container} pointerEvents="none">
+    <View style={[styles.container, { pointerEvents: 'none' }]}>
       {coins.map((coin) => (
         <Coin key={coin.id} {...coin} />
       ))}

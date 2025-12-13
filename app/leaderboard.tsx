@@ -238,7 +238,7 @@ function LeaderboardRow({
 
       {/* Level Badge */}
       <View style={{ marginRight: 10 }}>
-        <LevelBadgeInline level={entry.level} size="small" />
+        <LevelBadgeInline level={entry.level ?? 1} size="small" />
       </View>
 
       {/* Name & Stats */}

@@ -97,12 +97,9 @@ export function LevelBadge({
     transform: [{ scale: interpolate(glowPulse.value, [0, 1], [1, 1.15]) }],
   }));
   
-  const progressRingStyle = useAnimatedStyle(() => {
-    const circumference = Math.PI * (outer - strokeWidth);
-    return {
-      strokeDashoffset: circumference * (1 - ringProgress.value),
-    };
-  });
+  // Progress ring style for future SVG progress indicator
+  // const circumference = Math.PI * (outer - strokeWidth);
+  // Commented out for now - will be used when SVG progress ring is implemented
 
   return (
     <Pressable onPress={handlePress} disabled={!onPress}>

@@ -36,12 +36,33 @@ interface StreakDeathAnimationProps {
   onClose: () => void;
 }
 
-// Fake leaderboard friends data
-const FAKE_FRIENDS = [
-  { name: 'Alex', streak: 42, avatar: '😎' },
-  { name: 'Sam', streak: 28, avatar: '🔥' },
-  { name: 'Jordan', streak: 19, avatar: '⚡' },
-];
+// Dynamic fake friends data - streaks scale relative to user's dead streak
+function generateFakeFriends(deadStreak: number): { name: string; streak: number; avatar: string; inHyperstreak: boolean }[] {
+  // Friends have streaks that feel competitive but achievable
+  // Always at least one friend with higher streak for FOMO
+  const baseStreak = Math.max(3, deadStreak);
+  
+  return [
+    { 
+      name: 'Alex', 
+      streak: Math.floor(baseStreak * 1.3) + Math.floor(Math.random() * 10), 
+      avatar: '😎',
+      inHyperstreak: Math.random() > 0.6,
+    },
+    { 
+      name: 'Sam', 
+      streak: Math.floor(baseStreak * 0.9) + Math.floor(Math.random() * 8), 
+      avatar: '🔥',
+      inHyperstreak: Math.random() > 0.75,
+    },
+    { 
+      name: 'Jordan', 
+      streak: Math.floor(baseStreak * 0.6) + Math.floor(Math.random() * 5), 
+      avatar: '⚡',
+      inHyperstreak: false,
+    },
+  ].sort((a, b) => b.streak - a.streak); // Sort by streak descending
+}
 
 // Calculate fake percentile (everyone is in top 5% because dopamine)
 function getFakePercentile(streak: number): string {
@@ -206,6 +227,9 @@ function FOMOPhase({
   const frameScale = useSharedValue(0.8);
 
   const percentile = getFakePercentile(deadStreak);
+  
+  // Generate dynamic friends based on user's dead streak
+  const fakeFriends = React.useMemo(() => generateFakeFriends(deadStreak), [deadStreak]);
 
   useEffect(() => {
     if (active) {
@@ -297,13 +321,17 @@ function FOMOPhase({
       <Animated.View style={[styles.friendsContainer, friendsStyle]}>
         <Text style={styles.friendsTitle}>Friends still alive:</Text>
         <View style={styles.friendsList}>
-          {FAKE_FRIENDS.map((friend, idx) => (
+          {fakeFriends.map((friend, idx) => (
             <View key={idx} style={styles.friendItem}>
               <Text style={styles.friendAvatar}>{friend.avatar}</Text>
               <Text style={styles.friendName}>{friend.name}</Text>
               <View style={styles.friendStreak}>
                 <Text style={styles.friendFlame}>🔥</Text>
                 <Text style={styles.friendStreakNumber}>{friend.streak}</Text>
+                {/* Hyperstreak serpent indicator */}
+                {friend.inHyperstreak && (
+                  <Text style={styles.hyperSerpent}>🐍</Text>
+                )}
               </View>
             </View>
           ))}
@@ -791,6 +819,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Righteous_400Regular',
     color: COLORS.accent,
+  },
+  hyperSerpent: {
+    fontSize: 14,
+    marginLeft: 4,
   },
   
   // Declined Phase styles

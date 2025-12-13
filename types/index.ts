@@ -78,7 +78,14 @@ export interface LeaderboardEntry {
   votes_cast: number;
   win_rate: number;
   best_streak: number;
+  current_streak: number;
   rank: number;
+  level?: number;
+  // Hyperstreak fields
+  in_hyperstreak?: boolean;
+  hyperstreak_count?: number;
+  // Optional avatar
+  avatar_emoji?: string;
 }
 
 export interface UserStats {

@@ -116,7 +116,7 @@ export function ConfettiExplosion({ isCorrect, count = 60 }: ConfettiExplosionPr
   }, [count, isCorrect]);
 
   return (
-    <View style={styles.container} pointerEvents="none">
+    <View style={[styles.container, { pointerEvents: 'none' }]}>
       {pieces.map((piece) => (
         <ConfettiPiece key={piece.id} {...piece} />
       ))}
