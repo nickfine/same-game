@@ -90,8 +90,17 @@ export function useCompliance() {
 
   const loadState = async () => {
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored) {
+      // Add timeout to prevent infinite loading on web
+      const timeoutPromise = new Promise<null>((resolve) => {
+        setTimeout(() => resolve(null), 2000);
+      });
+      
+      const stored = await Promise.race([
+        AsyncStorage.getItem(STORAGE_KEY),
+        timeoutPromise
+      ]);
+      
+      if (stored && typeof stored === 'string') {
         const parsed = JSON.parse(stored) as ComplianceState;
         // Start fresh session
         setState({

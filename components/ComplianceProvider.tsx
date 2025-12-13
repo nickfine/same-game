@@ -99,9 +99,16 @@ export function ComplianceProvider({ children, uid, user }: ComplianceProviderPr
     showDailyVoteLimitModal,
   };
 
-  // Don't render anything while loading compliance state
+  // Show loading state briefly while compliance state loads
+  // This should resolve quickly with the timeout in useCompliance
   if (complianceLoading) {
-    return null;
+    // Return children anyway to prevent blank screen on web
+    // The age gate will show once loading completes if needed
+    return (
+      <ComplianceContext.Provider value={contextValue}>
+        {children}
+      </ComplianceContext.Provider>
+    );
   }
 
   return (
