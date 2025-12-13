@@ -218,3 +218,57 @@ export const LEVEL_TIERS = {
   DIAMOND: { min: 40, max: 49, name: 'Diamond', emoji: '💠', color: '#00E5FF', bgColor: 'rgba(0, 229, 255, 0.12)', glowColor: 'rgba(0, 229, 255, 0.4)' },
   LEGEND: { min: 50, max: 999, name: 'Legend', emoji: '🔥', color: '#FF3D00', bgColor: 'rgba(255, 61, 0, 0.15)', glowColor: 'rgba(255, 61, 0, 0.4)' },
 } as const;
+
+// ═══════════════════════════════════════════════════════════════
+// TEXT GLOW - Premium Multi-Layer Shadow Stack
+// ═══════════════════════════════════════════════════════════════
+export const TEXT_GLOW = {
+  // Base white glow + black depth (shared by both buttons)
+  BASE_SHADOW: '0px 0px 8px rgba(255,255,255,0.8), 0px 0px 16px rgba(255,255,255,0.6), 0px 4px 12px rgba(0,0,0,0.4)',
+  
+  // Button-specific colored outer glow
+  PURPLE_GLOW: '0px 0px 24px rgba(110,12,255,0.4)',   // Top button violet #6E0CFF
+  CORAL_GLOW: '0px 0px 24px rgba(255,59,110,0.4)',    // Bottom button coral #FF3B6E
+  HYPER_GLOW: '0px 0px 32px rgba(0,255,189,0.6)',     // Hyperstreak emerald #00FFBD
+  
+  // Combined shadow stacks for each button variant
+  get TOP_BUTTON() {
+    return `${this.BASE_SHADOW}, ${this.PURPLE_GLOW}`;
+  },
+  get BOTTOM_BUTTON() {
+    return `${this.BASE_SHADOW}, ${this.CORAL_GLOW}`;
+  },
+  get TOP_BUTTON_HYPER() {
+    return `${this.BASE_SHADOW}, ${this.PURPLE_GLOW}, ${this.HYPER_GLOW}`;
+  },
+  get BOTTOM_BUTTON_HYPER() {
+    return `${this.BASE_SHADOW}, ${this.CORAL_GLOW}, ${this.HYPER_GLOW}`;
+  },
+} as const;
+
+// Orb/Emoji Animation Constants
+export const ORB_ANIMATION = {
+  // Entrance animation
+  ENTRANCE_DURATION: 600,
+  ENTRANCE_STAGGER: 100,
+  ENTRANCE_OVERSHOOT: 1.3,
+  
+  // Idle breathe pulse
+  BREATHE_DURATION: 3000,
+  BREATHE_SCALE: 1.05,
+  
+  // Press interaction
+  PRESS_SCALE: 1.2,
+  SQUASH_SCALE_X: 1.15,
+  STRETCH_SCALE_X: 0.95,
+  SQUASH_DURATION: 200,
+  
+  // Hyperstreak orbit
+  ORBIT_DURATION: 8000,
+  ORBIT_RADIUS: 4,
+  
+  // Sizing
+  SIZE_LARGE: 80,   // >375px screens
+  SIZE_SMALL: 72,   // <=375px screens
+  LEFT_OFFSET: 40,  // px from left edge
+} as const;

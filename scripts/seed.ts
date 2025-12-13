@@ -1,8 +1,8 @@
 /**
- * Seed script to populate Firestore with initial questions
+ * Seed script to populate Firestore with 100 production questions
  * Uses Firebase Client SDK with Anonymous Auth
  * 
- * NEW FORMAT: Emoji-first questions with no question text
+ * FORMAT: Emoji-first, zero-text, screenshot-gold questions
  * 
  * Usage: npx ts-node --transpile-only scripts/seed.ts
  */
@@ -46,82 +46,126 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 // ═══════════════════════════════════════════════════════════════
-// 50 EMOJI-FIRST QUESTIONS - Pure visual cocaine
-// Format: { optionA, emojiA, optionB, emojiB, spicyContext }
+// 100 PRODUCTION QUESTIONS - Screenshot Gold
+// Short, judgmental, personality-loaded with perfect contrasting emojis
 // ═══════════════════════════════════════════════════════════════
 const seedQuestions = [
-  // TIME & LIFESTYLE
-  { optionA: "MORNING", emojiA: "🌅", optionB: "NIGHT", emojiB: "🌙", spicyContext: "shower thoughts" },
-  { optionA: "EARLY", emojiA: "⏰", optionB: "LATE", emojiB: "🦉", spicyContext: "sleep schedule" },
-  { optionA: "WEEKDAY", emojiA: "💼", optionB: "WEEKEND", emojiB: "🎉", spicyContext: "vibes" },
-  { optionA: "SUMMER", emojiA: "☀️", optionB: "WINTER", emojiB: "❄️", spicyContext: "seasons" },
-  { optionA: "CITY", emojiA: "🏙️", optionB: "NATURE", emojiB: "🏕️", spicyContext: "escape" },
-  
-  // FOOD WARS
-  { optionA: "COFFEE", emojiA: "☕", optionB: "TEA", emojiB: "🍵", spicyContext: "energy source" },
-  { optionA: "PIZZA", emojiA: "🍕", optionB: "TACOS", emojiB: "🌮", spicyContext: "food fight" },
-  { optionA: "SWEET", emojiA: "🍩", optionB: "SALTY", emojiB: "🍟", spicyContext: "snack attack" },
-  { optionA: "BREAKFAST", emojiA: "🥞", optionB: "DINNER", emojiB: "🍝", spicyContext: "best meal" },
-  { optionA: "SUSHI", emojiA: "🍣", optionB: "BURGER", emojiB: "🍔", spicyContext: "date night" },
-  { optionA: "COOK", emojiA: "👨‍🍳", optionB: "ORDER", emojiB: "📱", spicyContext: "hungry vibes" },
-  { optionA: "SPICY", emojiA: "🌶️", optionB: "MILD", emojiB: "🥛", spicyContext: "heat check" },
-  
-  // TECH TRIBES
-  { optionA: "iPHONE", emojiA: "🍎", optionB: "ANDROID", emojiB: "🤖", spicyContext: "phone wars" },
-  { optionA: "PC", emojiA: "🖥️", optionB: "CONSOLE", emojiB: "🎮", spicyContext: "gaming" },
-  { optionA: "NETFLIX", emojiA: "📺", optionB: "YOUTUBE", emojiB: "▶️", spicyContext: "binge time" },
-  { optionA: "SPOTIFY", emojiA: "🎵", optionB: "APPLE", emojiB: "🎧", spicyContext: "music" },
-  { optionA: "INSTA", emojiA: "📸", optionB: "TIKTOK", emojiB: "🎬", spicyContext: "scroll life" },
-  { optionA: "TEXT", emojiA: "💬", optionB: "CALL", emojiB: "📞", spicyContext: "contact" },
-  
-  // SOCIAL BEHAVIOR
-  { optionA: "REPLY", emojiA: "⚡", optionB: "MARINATE", emojiB: "⏳", spicyContext: "texting style" },
-  { optionA: "POST", emojiA: "📤", optionB: "LURK", emojiB: "👀", spicyContext: "social mode" },
-  { optionA: "PARTY", emojiA: "🎊", optionB: "COUCH", emojiB: "🛋️", spicyContext: "friday night" },
-  { optionA: "EARLY", emojiA: "🏃", optionB: "FASHIONABLY", emojiB: "💅", spicyContext: "arrival style" },
-  { optionA: "OVERSHARE", emojiA: "🗣️", optionB: "MYSTERIOUS", emojiB: "🤫", spicyContext: "personality" },
-  { optionA: "LEADER", emojiA: "👑", optionB: "VIBE", emojiB: "✌️", spicyContext: "group role" },
-  
-  // PHILOSOPHY & LIFE
-  { optionA: "MONEY", emojiA: "💰", optionB: "TIME", emojiB: "⏰", spicyContext: "priorities" },
-  { optionA: "FAME", emojiA: "⭐", optionB: "PRIVACY", emojiB: "🔒", spicyContext: "life goals" },
-  { optionA: "RISK", emojiA: "🎲", optionB: "SAFE", emojiB: "🛡️", spicyContext: "life choices" },
-  { optionA: "PAST", emojiA: "⏪", optionB: "FUTURE", emojiB: "⏩", spicyContext: "time travel" },
-  { optionA: "HEAD", emojiA: "🧠", optionB: "HEART", emojiB: "❤️", spicyContext: "decisions" },
-  { optionA: "OPTIMIST", emojiA: "😊", optionB: "REALIST", emojiB: "🤔", spicyContext: "outlook" },
-  
-  // HOT TAKES
-  { optionA: "PINEAPPLE", emojiA: "🍍", optionB: "NO", emojiB: "🚫", spicyContext: "on pizza" },
-  { optionA: "OVER", emojiA: "✅", optionB: "UNDER", emojiB: "❌", spicyContext: "toilet paper" },
-  { optionA: "GIF", emojiA: "🎞️", optionB: "JIF", emojiB: "🥜", spicyContext: "pronunciation" },
-  { optionA: "WATER", emojiA: "💧", optionB: "NOT", emojiB: "🔥", spicyContext: "is wet?" },
-  { optionA: "HOTDOG", emojiA: "🌭", optionB: "NOPE", emojiB: "🙅", spicyContext: "is sandwich?" },
-  
-  // ACTIVITIES
-  { optionA: "GYM", emojiA: "💪", optionB: "NAP", emojiB: "😴", spicyContext: "self care" },
-  { optionA: "BEACH", emojiA: "🏖️", optionB: "MOUNTAIN", emojiB: "⛰️", spicyContext: "vacation" },
-  { optionA: "READ", emojiA: "📚", optionB: "WATCH", emojiB: "🎬", spicyContext: "story time" },
-  { optionA: "ROAD TRIP", emojiA: "🚗", optionB: "FLY", emojiB: "✈️", spicyContext: "travel" },
-  { optionA: "PLAN", emojiA: "📋", optionB: "WING IT", emojiB: "🦅", spicyContext: "approach" },
-  
-  // ENTERTAINMENT
-  { optionA: "MARVEL", emojiA: "🦸", optionB: "DC", emojiB: "🦇", spicyContext: "heroes" },
-  { optionA: "DOGS", emojiA: "🐕", optionB: "CATS", emojiB: "🐈", spicyContext: "pets" },
-  { optionA: "HORROR", emojiA: "👻", optionB: "COMEDY", emojiB: "😂", spicyContext: "movie night" },
-  { optionA: "FICTION", emojiA: "🧙", optionB: "REALITY", emojiB: "📰", spicyContext: "content" },
-  { optionA: "LIVE", emojiA: "🎤", optionB: "STUDIO", emojiB: "🎚️", spicyContext: "music" },
-  
-  // MODERN LIFE
-  { optionA: "WFH", emojiA: "🏠", optionB: "OFFICE", emojiB: "🏢", spicyContext: "work life" },
-  { optionA: "ELECTRIC", emojiA: "⚡", optionB: "GAS", emojiB: "⛽", spicyContext: "cars" },
-  { optionA: "SAVE", emojiA: "🐷", optionB: "SPEND", emojiB: "💸", spicyContext: "money moves" },
-  { optionA: "RAIN", emojiA: "🌧️", optionB: "SUN", emojiB: "☀️", spicyContext: "weather" },
-  { optionA: "NIGHT OWL", emojiA: "🦉", optionB: "EARLY BIRD", emojiB: "🐦", spicyContext: "schedule" },
+  // PERSONALITY CALLOUTS (20)
+  { optionA: "MAIN CHARACTER", emojiA: "👑", optionB: "SIDE QUEST", emojiB: "🗺️", category: "personality" },
+  { optionA: "DELULU", emojiA: "💊", optionB: "SOLULU", emojiB: "💚", category: "personality" },
+  { optionA: "CHAOTIC", emojiA: "🔥", optionB: "CHILL", emojiB: "🧊", category: "personality" },
+  { optionA: "UNHINGED", emojiA: "🤪", optionB: "COMPOSED", emojiB: "🧘", category: "personality" },
+  { optionA: "DRAMA", emojiA: "🎭", optionB: "PEACE", emojiB: "☮️", category: "personality" },
+  { optionA: "LOUD", emojiA: "📢", optionB: "QUIET", emojiB: "🤫", category: "personality" },
+  { optionA: "OVERTHINKER", emojiA: "🧠", optionB: "VIBES ONLY", emojiB: "✨", category: "personality" },
+  { optionA: "MENACE", emojiA: "😈", optionB: "ANGEL", emojiB: "😇", category: "personality" },
+  { optionA: "YAPPER", emojiA: "🗣️", optionB: "LISTENER", emojiB: "👂", category: "personality" },
+  { optionA: "PETTY", emojiA: "💅", optionB: "MATURE", emojiB: "🎓", category: "personality" },
+  { optionA: "HOT MESS", emojiA: "🌋", optionB: "PUT TOGETHER", emojiB: "📦", category: "personality" },
+  { optionA: "GASLIGHT", emojiA: "🔦", optionB: "GATEKEEP", emojiB: "🚪", category: "personality" },
+  { optionA: "NPC", emojiA: "🤖", optionB: "PROTAGONIST", emojiB: "⭐", category: "personality" },
+  { optionA: "VILLAIN ERA", emojiA: "🦹", optionB: "HEALING ERA", emojiB: "🌸", category: "personality" },
+  { optionA: "FERAL", emojiA: "🐺", optionB: "CIVILIZED", emojiB: "🎩", category: "personality" },
+  { optionA: "BASED", emojiA: "💯", optionB: "CRINGE", emojiB: "😬", category: "personality" },
+  { optionA: "SLAY", emojiA: "⚔️", optionB: "SURVIVE", emojiB: "🏃", category: "personality" },
+  { optionA: "ICONIC", emojiA: "🏆", optionB: "FORGETTABLE", emojiB: "👻", category: "personality" },
+  { optionA: "BOLD", emojiA: "🦁", optionB: "CAUTIOUS", emojiB: "🐢", category: "personality" },
+  { optionA: "REAL", emojiA: "💎", optionB: "FAKE", emojiB: "🎭", category: "personality" },
+
+  // LIFESTYLE CHOICES (20)
+  { optionA: "TOUCH GRASS", emojiA: "🌱", optionB: "TOUCH SCREEN", emojiB: "📱", category: "lifestyle" },
+  { optionA: "MORNING", emojiA: "🌅", optionB: "NIGHT OWL", emojiB: "🦉", category: "lifestyle" },
+  { optionA: "HYGGE", emojiA: "🕯️", optionB: "GRIND", emojiB: "💪", category: "lifestyle" },
+  { optionA: "SOFT LIFE", emojiA: "☁️", optionB: "HARD LAUNCH", emojiB: "🚀", category: "lifestyle" },
+  { optionA: "HOMEBODY", emojiA: "🏠", optionB: "OUT OUT", emojiB: "🪩", category: "lifestyle" },
+  { optionA: "HOT GIRL WALK", emojiA: "🚶‍♀️", optionB: "ROT", emojiB: "🛋️", category: "lifestyle" },
+  { optionA: "5AM CLUB", emojiA: "⏰", optionB: "SLEEP IN", emojiB: "😴", category: "lifestyle" },
+  { optionA: "CLEAN GIRL", emojiA: "🧴", optionB: "GOBLIN MODE", emojiB: "👺", category: "lifestyle" },
+  { optionA: "GYM RAT", emojiA: "🏋️", optionB: "COUCH KING", emojiB: "👑", category: "lifestyle" },
+  { optionA: "MEAL PREP", emojiA: "🥗", optionB: "UBER EATS", emojiB: "🛵", category: "lifestyle" },
+  { optionA: "MINIMALIST", emojiA: "⬜", optionB: "MAXIMALIST", emojiB: "🌈", category: "lifestyle" },
+  { optionA: "CITY GIRL", emojiA: "🏙️", optionB: "COUNTRY", emojiB: "🌾", category: "lifestyle" },
+  { optionA: "BEACH", emojiA: "🏖️", optionB: "MOUNTAINS", emojiB: "⛰️", category: "lifestyle" },
+  { optionA: "SOBER", emojiA: "🧃", optionB: "SPICY MARG", emojiB: "🍹", category: "lifestyle" },
+  { optionA: "PLAN", emojiA: "📋", optionB: "WING IT", emojiB: "🦅", category: "lifestyle" },
+  { optionA: "EARLY", emojiA: "🏃", optionB: "FASHIONABLY LATE", emojiB: "💅", category: "lifestyle" },
+  { optionA: "SAVE", emojiA: "🐷", optionB: "TREAT YOURSELF", emojiB: "💸", category: "lifestyle" },
+  { optionA: "ROAD TRIP", emojiA: "🚗", optionB: "FLY", emojiB: "✈️", category: "lifestyle" },
+  { optionA: "CAMPING", emojiA: "⛺", optionB: "HOTEL", emojiB: "🏨", category: "lifestyle" },
+  { optionA: "ADOPT", emojiA: "🐶", optionB: "SHOP", emojiB: "🏪", category: "lifestyle" },
+
+  // SOCIAL & DATING (15)
+  { optionA: "TEXT FIRST", emojiA: "📱", optionB: "WAIT", emojiB: "⏳", category: "social" },
+  { optionA: "SITUATIONSHIP", emojiA: "🤷", optionB: "LABEL IT", emojiB: "💍", category: "social" },
+  { optionA: "REPLY FAST", emojiA: "⚡", optionB: "MARINATE", emojiB: "🥩", category: "social" },
+  { optionA: "HARD LAUNCH", emojiA: "🚀", optionB: "SOFT LAUNCH", emojiB: "🌙", category: "social" },
+  { optionA: "DOUBLE TEXT", emojiA: "📱📱", optionB: "DIGNITY", emojiB: "🎭", category: "social" },
+  { optionA: "GHOST", emojiA: "👻", optionB: "CLOSURE", emojiB: "📬", category: "social" },
+  { optionA: "JEALOUS", emojiA: "👀", optionB: "SECURE", emojiB: "🔒", category: "social" },
+  { optionA: "ATTACH", emojiA: "🧲", optionB: "AVOIDANT", emojiB: "🏃‍♂️", category: "social" },
+  { optionA: "OVERSHARE", emojiA: "🗣️", optionB: "MYSTERIOUS", emojiB: "🎭", category: "social" },
+  { optionA: "BIG WEDDING", emojiA: "💒", optionB: "ELOPE", emojiB: "🌴", category: "social" },
+  { optionA: "STALK", emojiA: "🔍", optionB: "BLOCK", emojiB: "🚫", category: "social" },
+  { optionA: "EX", emojiA: "⏮️", optionB: "NEXT", emojiB: "⏭️", category: "social" },
+  { optionA: "CUFF", emojiA: "🍂", optionB: "HOT GIRL SUMMER", emojiB: "☀️", category: "social" },
+  { optionA: "RIZZ", emojiA: "😏", optionB: "NO GAME", emojiB: "😶", category: "social" },
+  { optionA: "FRIEND ZONE", emojiA: "🤝", optionB: "SHOOT SHOT", emojiB: "🏀", category: "social" },
+
+  // FOOD WARS (10)
+  { optionA: "SWEET", emojiA: "🍩", optionB: "SALTY", emojiB: "🍟", category: "food" },
+  { optionA: "BRUNCH", emojiA: "🥞", optionB: "DINNER", emojiB: "🍝", category: "food" },
+  { optionA: "MATCHA", emojiA: "🍵", optionB: "COFFEE", emojiB: "☕", category: "food" },
+  { optionA: "SUSHI", emojiA: "🍣", optionB: "PIZZA", emojiB: "🍕", category: "food" },
+  { optionA: "COOK", emojiA: "👨‍🍳", optionB: "ORDER", emojiB: "🛵", category: "food" },
+  { optionA: "SPICY", emojiA: "🌶️", optionB: "MILD", emojiB: "🥛", category: "food" },
+  { optionA: "PINEAPPLE", emojiA: "🍍", optionB: "NO WAY", emojiB: "🙅", category: "food" },
+  { optionA: "WELL DONE", emojiA: "🔥", optionB: "RARE", emojiB: "🩸", category: "food" },
+  { optionA: "BONE IN", emojiA: "🦴", optionB: "BONELESS", emojiB: "🍗", category: "food" },
+  { optionA: "RANCH", emojiA: "🥛", optionB: "NO RANCH", emojiB: "❌", category: "food" },
+
+  // TECH & CULTURE (15)
+  { optionA: "iPHONE", emojiA: "🍎", optionB: "ANDROID", emojiB: "🤖", category: "tech" },
+  { optionA: "DARK MODE", emojiA: "🌙", optionB: "LIGHT MODE", emojiB: "☀️", category: "tech" },
+  { optionA: "AIRPODS", emojiA: "🎧", optionB: "WIRED", emojiB: "🔌", category: "tech" },
+  { optionA: "SCROLL", emojiA: "📱", optionB: "TOUCH GRASS", emojiB: "🌿", category: "tech" },
+  { optionA: "POST", emojiA: "📤", optionB: "LURK", emojiB: "👀", category: "tech" },
+  { optionA: "BEREAL", emojiA: "📸", optionB: "CURATED", emojiB: "✨", category: "tech" },
+  { optionA: "FACETIME", emojiA: "📹", optionB: "VOICE NOTE", emojiB: "🎤", category: "tech" },
+  { optionA: "PODCAST", emojiA: "🎙️", optionB: "MUSIC", emojiB: "🎵", category: "tech" },
+  { optionA: "BINGE", emojiA: "📺", optionB: "ONE EP", emojiB: "1️⃣", category: "tech" },
+  { optionA: "SUBTITLES", emojiA: "💬", optionB: "RAW", emojiB: "🔇", category: "tech" },
+  { optionA: "SPOILERS", emojiA: "🗣️", optionB: "PURE", emojiB: "🙈", category: "tech" },
+  { optionA: "PC", emojiA: "🖥️", optionB: "CONSOLE", emojiB: "🎮", category: "tech" },
+  { optionA: "AI", emojiA: "🤖", optionB: "HUMAN", emojiB: "👤", category: "tech" },
+  { optionA: "VIRAL", emojiA: "📈", optionB: "AUTHENTIC", emojiB: "💚", category: "tech" },
+  { optionA: "MAIN", emojiA: "👤", optionB: "FINSTA", emojiB: "🥷", category: "tech" },
+
+  // HOT TAKES & CHAOS (20)
+  { optionA: "GIF", emojiA: "🎞️", optionB: "JIF", emojiB: "🥜", category: "hottake" },
+  { optionA: "WATER WET", emojiA: "💧", optionB: "WATER NOT", emojiB: "🔥", category: "hottake" },
+  { optionA: "HOTDOG SANDWICH", emojiA: "🌭", optionB: "HOTDOG NOT", emojiB: "🙅", category: "hottake" },
+  { optionA: "TOILET OVER", emojiA: "✅", optionB: "TOILET UNDER", emojiB: "❌", category: "hottake" },
+  { optionA: "CEREAL FIRST", emojiA: "🥣", optionB: "MILK FIRST", emojiB: "🥛", category: "hottake" },
+  { optionA: "SHOWER AM", emojiA: "🌅", optionB: "SHOWER PM", emojiB: "🌙", category: "hottake" },
+  { optionA: "SOCKS BED", emojiA: "🧦", optionB: "NO SOCKS", emojiB: "🦶", category: "hottake" },
+  { optionA: "PHONE FACE UP", emojiA: "📱", optionB: "FACE DOWN", emojiB: "🔻", category: "hottake" },
+  { optionA: "REPLY ALL", emojiA: "📧", optionB: "NEVER", emojiB: "🚫", category: "hottake" },
+  { optionA: "LOUD CHEWER", emojiA: "😤", optionB: "FORGIVABLE", emojiB: "🤷", category: "hottake" },
+  { optionA: "OPEN MOUTH", emojiA: "😮", optionB: "CHEW CLOSED", emojiB: "😶", category: "hottake" },
+  { optionA: "RECLINER", emojiA: "💺", optionB: "RESPECT SPACE", emojiB: "🧘", category: "hottake" },
+  { optionA: "STEAL FRIES", emojiA: "🍟", optionB: "ASK FIRST", emojiB: "🙋", category: "hottake" },
+  { optionA: "CROCS VALID", emojiA: "🐊", optionB: "CROCS NO", emojiB: "❌", category: "hottake" },
+  { optionA: "CARGO PANTS", emojiA: "👖", optionB: "FASHION CRIME", emojiB: "🚨", category: "hottake" },
+  { optionA: "AISLE", emojiA: "🚶", optionB: "WINDOW", emojiB: "🪟", category: "hottake" },
+  { optionA: "FRONT SEAT", emojiA: "🚗", optionB: "BACK SEAT", emojiB: "🔙", category: "hottake" },
+  { optionA: "QUEUE JUMPER", emojiA: "😈", optionB: "WAIT", emojiB: "😇", category: "hottake" },
+  { optionA: "READ RECEIPTS", emojiA: "✓✓", optionB: "CHAOS", emojiB: "❓", category: "hottake" },
+  { optionA: "FOLD", emojiA: "📂", optionB: "SCRUNCH", emojiB: "🧻", category: "hottake" },
 ];
 
 // Generate random vote counts for seeding (makes it interesting from the start)
 function randomVotes(): { votes_a: number; votes_b: number } {
-  const total = Math.floor(Math.random() * 150) + 30; // 30-180 total votes
+  const total = Math.floor(Math.random() * 200) + 50; // 50-250 total votes
   const ratio = 0.3 + Math.random() * 0.4; // 30-70% split to make it competitive
   const votes_a = Math.floor(total * ratio);
   return {
@@ -131,9 +175,12 @@ function randomVotes(): { votes_a: number; votes_b: number } {
 }
 
 async function seed() {
-  console.log('🌱 Starting seed process...\n');
+  console.log('\n' + '═'.repeat(60));
+  console.log('🎰 SAME - Production Question Seed');
+  console.log('═'.repeat(60) + '\n');
+  
   console.log(`📊 Project: ${firebaseConfig.projectId}`);
-  console.log(`📊 Target: ${seedQuestions.length} emoji-first questions\n`);
+  console.log(`📊 Target: ${seedQuestions.length} screenshot-gold questions\n`);
   
   // Sign in anonymously
   console.log('🔐 Signing in anonymously...');
@@ -152,12 +199,11 @@ async function seed() {
   
   // Check existing questions
   console.log('📂 Checking existing questions...');
-  const existingQuery = query(questionsRef, limit(100));
+  const existingQuery = query(questionsRef, limit(200));
   const existingDocs = await getDocs(existingQuery);
   const existingOptions = new Set(
     existingDocs.docs.map((d: any) => {
       const data = d.data();
-      // Check both old format (option_a) and new format (optionA)
       return `${data.optionA || data.option_a}_${data.optionB || data.option_b}`;
     })
   );
@@ -166,13 +212,13 @@ async function seed() {
     console.log(`   Found ${existingDocs.size} existing questions.`);
     console.log('   Will skip duplicates...\n');
   } else {
-    console.log('   No existing questions found.\n');
+    console.log('   No existing questions found. Fresh start!\n');
   }
   
   let added = 0;
   let skipped = 0;
   
-  console.log('📝 Adding emoji-first questions...\n');
+  console.log('📝 Adding production questions...\n');
   
   for (const question of seedQuestions) {
     const key = `${question.optionA}_${question.optionB}`;
@@ -192,20 +238,20 @@ async function seed() {
       
       added++;
       const pct_a = Math.round((votes.votes_a / (votes.votes_a + votes.votes_b)) * 100);
-      console.log(`   ✅ [${added}] ${question.emojiA} ${question.optionA} vs ${question.emojiB} ${question.optionB} (${pct_a}% vs ${100-pct_a}%)`);
+      console.log(`   ✅ [${added}] ${question.emojiA} ${question.optionA} vs ${question.emojiB} ${question.optionB} (${pct_a}%-${100-pct_a}%)`);
     } catch (writeError: any) {
       console.error(`   ❌ Failed: "${question.optionA} vs ${question.optionB}" - ${writeError.message}`);
     }
   }
   
-  console.log('\n' + '='.repeat(60));
+  console.log('\n' + '═'.repeat(60));
   console.log('🎉 SEED COMPLETE!\n');
-  console.log(`   ✅ Added: ${added} emoji-first questions`);
+  console.log(`   ✅ Added: ${added} new questions`);
   if (skipped > 0) {
     console.log(`   ⏭️  Skipped: ${skipped} duplicates`);
   }
   console.log(`   📊 Total in DB: ${existingDocs.size + added} questions`);
-  console.log('='.repeat(60) + '\n');
+  console.log('═'.repeat(60) + '\n');
   
   process.exit(0);
 }

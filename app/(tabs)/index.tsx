@@ -783,8 +783,10 @@ const styles = StyleSheet.create({
     // ~15% of screen
   },
   heroButtonsSection: {
-    flex: 1, // Takes remaining ~75% (no teaser)
+    flex: 0.75, // Reduce buttons to 75% of available space
     marginHorizontal: 0,
+    marginTop: 8,
+    marginBottom: 12,
   },
   powerUpSection: {
     // ~10% of screen (56px fixed)

@@ -136,20 +136,20 @@ export function AgeGate({ visible, onComplete }: AgeGateProps) {
               accessibilityLabel={`Select ${m}`}
               testID={`month-${m.toLowerCase()}`}
               style={({ pressed }) => ({
-                backgroundColor: pressed ? COLORS.text : COLORS.white,
+                backgroundColor: pressed ? COLORS.primary : COLORS.surface,
                 borderRadius: 12,
                 paddingVertical: 14,
                 paddingHorizontal: 20,
                 minWidth: 140,
                 borderWidth: 2,
-                borderColor: COLORS.border,
+                borderColor: pressed ? COLORS.primary : COLORS.glassBorder,
               })}
             >
               {({ pressed }) => (
                 <Text style={{ 
                   fontFamily: 'Poppins_500Medium',
                   fontSize: 16,
-                  color: pressed ? COLORS.white : COLORS.text,
+                  color: COLORS.text,
                   textAlign: 'center',
                 }}>
                   {m}
@@ -199,21 +199,21 @@ export function AgeGate({ visible, onComplete }: AgeGateProps) {
               accessibilityLabel={`Select day ${d}`}
               testID={`day-${d}`}
               style={({ pressed }) => ({
-                backgroundColor: pressed ? COLORS.text : COLORS.white,
+                backgroundColor: pressed ? COLORS.primary : COLORS.surface,
                 borderRadius: 10,
                 width: 56,
                 height: 56,
                 justifyContent: 'center',
                 alignItems: 'center',
                 borderWidth: 2,
-                borderColor: COLORS.border,
+                borderColor: pressed ? COLORS.primary : COLORS.glassBorder,
               })}
             >
               {({ pressed }) => (
                 <Text style={{ 
                   fontFamily: 'Poppins_600SemiBold',
                   fontSize: 18,
-                  color: pressed ? COLORS.white : COLORS.text,
+                  color: COLORS.text,
                 }}>
                   {d}
                 </Text>
@@ -262,20 +262,20 @@ export function AgeGate({ visible, onComplete }: AgeGateProps) {
               accessibilityLabel={`Select year ${y}`}
               testID={`year-${y}`}
               style={({ pressed }) => ({
-                backgroundColor: pressed ? COLORS.text : COLORS.white,
+                backgroundColor: pressed ? COLORS.primary : COLORS.surface,
                 borderRadius: 10,
                 paddingVertical: 12,
                 paddingHorizontal: 16,
                 minWidth: 80,
                 borderWidth: 2,
-                borderColor: COLORS.border,
+                borderColor: pressed ? COLORS.primary : COLORS.glassBorder,
               })}
             >
               {({ pressed }) => (
                 <Text style={{ 
                   fontFamily: 'Poppins_600SemiBold',
                   fontSize: 16,
-                  color: pressed ? COLORS.white : COLORS.text,
+                  color: COLORS.text,
                   textAlign: 'center',
                 }}>
                   {y}

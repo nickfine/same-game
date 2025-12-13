@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useAnimatedStyle,
@@ -11,15 +11,19 @@ import Animated, {
   withDelay,
   Easing,
   cancelAnimation,
+  interpolate,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { playSoundGlobal } from '../hooks/useSound';
-import { COLORS, GRADIENTS } from '../lib/constants';
+import { COLORS, GRADIENTS, TEXT_GLOW, ORB_ANIMATION } from '../lib/constants';
+import { OrbEmoji } from './OrbEmoji';
 import type { VoteChoice } from '../types';
 
 // ═══════════════════════════════════════════════════════════════
-// TYPES
+// VOTE BUTTONS - Screenshot Gold Edition
+// Every tap feels like thunder. Every pixel is intentional.
 // ═══════════════════════════════════════════════════════════════
+
 interface PeekData {
   percentage_a: number;
   percentage_b: number;
@@ -40,11 +44,7 @@ interface VoteButtonsProps {
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-const AnimatedText = Animated.createAnimatedComponent(Text);
 
-// ═══════════════════════════════════════════════════════════════
-// COMPONENT
-// ═══════════════════════════════════════════════════════════════
 export function VoteButtons({
   optionA,
   optionB,
@@ -57,78 +57,68 @@ export function VoteButtons({
   peekData,
   doubleDownActive,
 }: VoteButtonsProps) {
-  const { height: screenHeight, width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmallScreen = screenWidth <= 375;
   
-  // Button animation values
+  // Text sizing based on screen width
+  const textSize = isSmallScreen ? 48 : 56;
+  
+  // Press states for orb animations
+  const [isPressedA, setIsPressedA] = useState(false);
+  const [isPressedB, setIsPressedB] = useState(false);
+  
+  // ═══════════════════════════════════════════════════════════════
+  // BUTTON ANIMATION VALUES
+  // ═══════════════════════════════════════════════════════════════
+  
+  // Button transforms
   const scaleA = useSharedValue(0.95);
   const scaleB = useSharedValue(0.95);
   const translateYA = useSharedValue(100);
   const translateYB = useSharedValue(100);
+  
+  // Subtle idle pulse
   const pulseA = useSharedValue(1);
   const pulseB = useSharedValue(1);
   
-  // Emoji pop-in animation values (scale 0 → 1.3 → 1)
-  const emojiScaleA = useSharedValue(0);
-  const emojiScaleB = useSharedValue(0);
-  
-  // Hyperstreak emoji glow pulse
-  const emojiGlowRadius = useSharedValue(8);
-  
-  // Responsive sizing - optimized for emoji-first design
-  const emojiSize = 48; // Fixed 48pt as specified
-  const textSize = 56;  // Fixed 56pt bold as specified
-  const buttonHeight = (screenHeight * 0.70) / 2 - 8; // 70% of screen, split by 2, minus gap
+  // Glow burst on press
+  const glowBurstA = useSharedValue(0);
+  const glowBurstB = useSharedValue(0);
 
   // ═══════════════════════════════════════════════════════════════
-  // ENTRANCE ANIMATION + EMOJI POP-IN
+  // ENTRANCE ANIMATION
   // ═══════════════════════════════════════════════════════════════
   useEffect(() => {
     if (!hidden) {
-      // Reset emoji scales
-      emojiScaleA.value = 0;
-      emojiScaleB.value = 0;
-      
-      // Staggered slide-up + overshoot scale for buttons
+      // Staggered slide-up with overshoot
       translateYA.value = withDelay(0, withSpring(0, { damping: 18, stiffness: 180 }));
       scaleA.value = withDelay(0, withSequence(
-        withSpring(1.05, { damping: 10, stiffness: 200 }),
+        withSpring(1.03, { damping: 10, stiffness: 200 }),
         withSpring(1, { damping: 15 })
       ));
       
-      translateYB.value = withDelay(100, withSpring(0, { damping: 18, stiffness: 180 }));
-      scaleB.value = withDelay(100, withSequence(
-        withSpring(1.05, { damping: 10, stiffness: 200 }),
+      translateYB.value = withDelay(80, withSpring(0, { damping: 18, stiffness: 180 }));
+      scaleB.value = withDelay(80, withSequence(
+        withSpring(1.03, { damping: 10, stiffness: 200 }),
         withSpring(1, { damping: 15 })
-      ));
-      
-      // Emoji pop-in: scale 0 → 1.3 → 1 with micro-delay
-      emojiScaleA.value = withDelay(150, withSequence(
-        withSpring(1.3, { damping: 8, stiffness: 300 }),
-        withSpring(1, { damping: 12 })
-      ));
-      emojiScaleB.value = withDelay(230, withSequence( // 80ms stagger
-        withSpring(1.3, { damping: 8, stiffness: 300 }),
-        withSpring(1, { damping: 12 })
       ));
     } else {
       translateYA.value = 100;
       translateYB.value = 100;
       scaleA.value = 0.95;
       scaleB.value = 0.95;
-      emojiScaleA.value = 0;
-      emojiScaleB.value = 0;
     }
-  }, [hidden, optionA, optionB]); // Re-trigger on question change
+  }, [hidden, optionA, optionB]);
 
   // ═══════════════════════════════════════════════════════════════
-  // CONTINUOUS PULSE ANIMATION (2x speed in Hyperstreak)
+  // CONTINUOUS PULSE (faster in hyperstreak)
   // ═══════════════════════════════════════════════════════════════
   useEffect(() => {
-    const duration = inHyperstreak ? 350 : 700;
+    const duration = inHyperstreak ? 250 : 500;
     
     pulseA.value = withRepeat(
       withSequence(
-        withTiming(1.02, { duration, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1.012, { duration, easing: Easing.inOut(Easing.ease) }),
         withTiming(1.0, { duration, easing: Easing.inOut(Easing.ease) })
       ),
       -1,
@@ -137,61 +127,60 @@ export function VoteButtons({
     
     pulseB.value = withDelay(duration / 2, withRepeat(
       withSequence(
-        withTiming(1.02, { duration, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1.012, { duration, easing: Easing.inOut(Easing.ease) }),
         withTiming(1.0, { duration, easing: Easing.inOut(Easing.ease) })
       ),
       -1,
       true
     ));
     
-    // Hyperstreak emoji glow pulse
-    if (inHyperstreak) {
-      emojiGlowRadius.value = withRepeat(
-        withSequence(
-          withTiming(20, { duration: 400, easing: Easing.inOut(Easing.ease) }),
-          withTiming(8, { duration: 400, easing: Easing.inOut(Easing.ease) })
-        ),
-        -1,
-        true
-      );
-    } else {
-      emojiGlowRadius.value = 8;
-    }
-    
     return () => {
       cancelAnimation(pulseA);
       cancelAnimation(pulseB);
-      cancelAnimation(emojiGlowRadius);
     };
   }, [inHyperstreak]);
 
   // ═══════════════════════════════════════════════════════════════
-  // PRESS HANDLERS
+  // PRESS HANDLERS - Thunder Haptics
   // ═══════════════════════════════════════════════════════════════
   const handlePressIn = (option: 'a' | 'b') => {
     if (disabled) return;
     
+    // Heavy haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    
     if (option === 'a') {
-      scaleA.value = withSpring(0.96, { damping: 15, stiffness: 300 });
+      setIsPressedA(true);
+      scaleA.value = withSpring(0.98, { damping: 15, stiffness: 400 });
+      glowBurstA.value = withSequence(
+        withTiming(1, { duration: 100 }),
+        withTiming(0, { duration: 300 })
+      );
     } else {
-      scaleB.value = withSpring(0.96, { damping: 15, stiffness: 300 });
+      setIsPressedB(true);
+      scaleB.value = withSpring(0.98, { damping: 15, stiffness: 400 });
+      glowBurstB.value = withSequence(
+        withTiming(1, { duration: 100 }),
+        withTiming(0, { duration: 300 })
+      );
     }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const handlePressOut = (option: 'a' | 'b') => {
     if (option === 'a') {
-      scaleA.value = withSpring(1.0, { damping: 15 });
+      setIsPressedA(false);
+      scaleA.value = withSpring(1.0, { damping: 12 });
     } else {
-      scaleB.value = withSpring(1.0, { damping: 15 });
+      setIsPressedB(false);
+      scaleB.value = withSpring(1.0, { damping: 12 });
     }
   };
 
   const handlePress = (choice: VoteChoice) => {
     if (disabled) return;
     
-    // THUNDER haptic on vote
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    // THUNDER haptic on commit
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     playSoundGlobal('tap');
     onVote(choice);
   };
@@ -215,36 +204,57 @@ export function VoteButtons({
     opacity: hidden ? 0 : 1,
   }));
   
-  // Emoji animated styles with pop-in and hyperstreak glow
-  const emojiStyleA = useAnimatedStyle(() => ({
-    transform: [{ scale: emojiScaleA.value }],
-    textShadowColor: inHyperstreak ? '#00FFBD' : 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: inHyperstreak ? 0 : 2 },
-    textShadowRadius: inHyperstreak ? emojiGlowRadius.value : 4,
+  // Glow burst overlay styles
+  const glowBurstStyleA = useAnimatedStyle(() => ({
+    opacity: glowBurstA.value * 0.4,
   }));
   
-  const emojiStyleB = useAnimatedStyle(() => ({
-    transform: [{ scale: emojiScaleB.value }],
-    textShadowColor: inHyperstreak ? '#00FFBD' : 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: inHyperstreak ? 0 : 2 },
-    textShadowRadius: inHyperstreak ? emojiGlowRadius.value : 4,
+  const glowBurstStyleB = useAnimatedStyle(() => ({
+    opacity: glowBurstB.value * 0.4,
   }));
+
+  // ═══════════════════════════════════════════════════════════════
+  // TEXT SHADOW - The Secret Sauce
+  // Multi-layer glow stack for that screenshot gold effect
+  // ═══════════════════════════════════════════════════════════════
+  const getTextShadowStyle = (variant: 'top' | 'bottom') => {
+    const isWeb = Platform.OS === 'web';
+    
+    if (isWeb) {
+      // Web: Use CSS text-shadow property
+      const shadowStack = inHyperstreak
+        ? (variant === 'top' ? TEXT_GLOW.TOP_BUTTON_HYPER : TEXT_GLOW.BOTTOM_BUTTON_HYPER)
+        : (variant === 'top' ? TEXT_GLOW.TOP_BUTTON : TEXT_GLOW.BOTTOM_BUTTON);
+      
+      return {
+        textShadow: shadowStack,
+      } as any;
+    }
+    
+    // Native: Use React Native shadow properties (limited but works)
+    return {
+      textShadowColor: 'rgba(0, 0, 0, 0.4)',
+      textShadowOffset: { width: 0, height: 4 },
+      textShadowRadius: 12,
+    };
+  };
 
   return (
     <View style={[styles.container, hidden && styles.hidden]}>
-      {/* Double Down Active Indicator */}
+      {/* Double Down Banner */}
       {doubleDownActive && (
         <Animated.View style={styles.doubleDownBanner}>
-          <Text style={styles.doubleDownText}>🎲 2X POINTS ACTIVE</Text>
+          <Text style={styles.doubleDownText}>🎲 2X ACTIVE</Text>
         </Animated.View>
       )}
       
-      {/* Option A - Top Button (Purple Gradient) */}
+      {/* ═══════════════════════════════════════════════════════════
+          OPTION A - Top Button (Purple Gradient)
+      ═══════════════════════════════════════════════════════════ */}
       <AnimatedPressable
         style={[
           styles.buttonWrapper,
           styles.buttonTop,
-          { height: buttonHeight },
           animatedStyleA,
           inHyperstreak && styles.hyperGlow,
         ]}
@@ -261,6 +271,9 @@ export function VoteButtons({
           end={{ x: 1, y: 1 }}
           style={styles.buttonGradient}
         >
+          {/* Glow burst overlay */}
+          <Animated.View style={[styles.glowBurstOverlay, styles.glowBurstPurple, glowBurstStyleA]} />
+          
           {/* Peek Badge */}
           {peekData && (
             <View style={[
@@ -268,22 +281,32 @@ export function VoteButtons({
               peekData.leading === 'a' && styles.peekBadgeLeading,
             ]}>
               <Text style={styles.peekText}>
-                {peekData.percentage_a}%
-                {peekData.leading === 'a' && ' 👑'}
+                {peekData.percentage_a}%{peekData.leading === 'a' && ' 👑'}
               </Text>
             </View>
           )}
           
+          {/* Content: Orb Emoji Left + Text Right */}
           <View style={styles.buttonContent}>
-            {/* Emoji 48pt left */}
-            <AnimatedText style={[styles.buttonEmoji, { fontSize: emojiSize }, emojiStyleA]}>
-              {emojiA}
-            </AnimatedText>
-            {/* Text 56pt bold right */}
+            <View style={styles.emojiContainer}>
+              <OrbEmoji
+                emoji={emojiA}
+                variant="top"
+                isPressed={isPressedA}
+                isHyperstreak={inHyperstreak}
+                hidden={hidden ?? false}
+                entranceDelay={ORB_ANIMATION.ENTRANCE_STAGGER}
+              />
+            </View>
             <Text
-              style={[styles.buttonText, { fontSize: textSize }]}
+              style={[
+                styles.buttonText,
+                { fontSize: textSize },
+                getTextShadowStyle('top'),
+              ]}
               numberOfLines={1}
               adjustsFontSizeToFit
+              minimumFontScale={0.5}
             >
               {optionA.toUpperCase()}?
             </Text>
@@ -291,12 +314,13 @@ export function VoteButtons({
         </LinearGradient>
       </AnimatedPressable>
 
-      {/* Option B - Bottom Button (Coral Gradient) */}
+      {/* ═══════════════════════════════════════════════════════════
+          OPTION B - Bottom Button (Coral Gradient)
+      ═══════════════════════════════════════════════════════════ */}
       <AnimatedPressable
         style={[
           styles.buttonWrapper,
           styles.buttonBottom,
-          { height: buttonHeight },
           animatedStyleB,
           inHyperstreak && styles.hyperGlow,
         ]}
@@ -313,6 +337,9 @@ export function VoteButtons({
           end={{ x: 1, y: 1 }}
           style={styles.buttonGradient}
         >
+          {/* Glow burst overlay */}
+          <Animated.View style={[styles.glowBurstOverlay, styles.glowBurstCoral, glowBurstStyleB]} />
+          
           {/* Peek Badge */}
           {peekData && (
             <View style={[
@@ -320,22 +347,32 @@ export function VoteButtons({
               peekData.leading === 'b' && styles.peekBadgeLeading,
             ]}>
               <Text style={styles.peekText}>
-                {peekData.percentage_b}%
-                {peekData.leading === 'b' && ' 👑'}
+                {peekData.percentage_b}%{peekData.leading === 'b' && ' 👑'}
               </Text>
             </View>
           )}
           
+          {/* Content: Orb Emoji Left + Text Right */}
           <View style={styles.buttonContent}>
-            {/* Emoji 48pt left */}
-            <AnimatedText style={[styles.buttonEmoji, { fontSize: emojiSize }, emojiStyleB]}>
-              {emojiB}
-            </AnimatedText>
-            {/* Text 56pt bold right */}
+            <View style={styles.emojiContainer}>
+              <OrbEmoji
+                emoji={emojiB}
+                variant="bottom"
+                isPressed={isPressedB}
+                isHyperstreak={inHyperstreak}
+                hidden={hidden ?? false}
+                entranceDelay={ORB_ANIMATION.ENTRANCE_STAGGER * 2}
+              />
+            </View>
             <Text
-              style={[styles.buttonText, { fontSize: textSize }]}
+              style={[
+                styles.buttonText,
+                { fontSize: textSize },
+                getTextShadowStyle('bottom'),
+              ]}
               numberOfLines={1}
               adjustsFontSizeToFit
+              minimumFontScale={0.5}
             >
               {optionB.toUpperCase()}?
             </Text>
@@ -343,7 +380,7 @@ export function VoteButtons({
         </LinearGradient>
       </AnimatedPressable>
       
-      {/* Hyperstreak Glow Overlay */}
+      {/* Hyperstreak Glow Border Overlay */}
       {inHyperstreak && !hidden && (
         <View style={styles.hyperOverlay} pointerEvents="none">
           <View style={styles.hyperBorder} />
@@ -354,13 +391,13 @@ export function VoteButtons({
 }
 
 // ═══════════════════════════════════════════════════════════════
-// STYLES
+// STYLES - Screenshot Gold
 // ═══════════════════════════════════════════════════════════════
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginHorizontal: 0, // Edge-to-edge
-    gap: 0, // No gap between buttons
+    marginHorizontal: 0,
+    gap: 4, // Small gap for shadow visibility
   },
   hidden: {
     opacity: 0,
@@ -368,85 +405,104 @@ const styles = StyleSheet.create({
   },
   doubleDownBanner: {
     position: 'absolute',
-    top: -40,
+    top: -36,
     alignSelf: 'center',
     backgroundColor: COLORS.secondary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
     zIndex: 10,
   },
   doubleDownText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Poppins_700Bold',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   buttonWrapper: {
     flex: 1,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    elevation: 20,
   },
   buttonTop: {
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
   },
   buttonBottom: {
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
   buttonGradient: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingLeft: ORB_ANIMATION.LEFT_OFFSET,
+    paddingRight: 24,
     position: 'relative',
+    overflow: 'hidden',
   },
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
+    gap: 16,
   },
-  buttonEmoji: {
-    // Emoji styling - will be animated
+  emojiContainer: {
+    width: ORB_ANIMATION.SIZE_LARGE + 20, // Extra space for animations
+    height: ORB_ANIMATION.SIZE_LARGE + 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   buttonText: {
-    color: COLORS.white,
-    fontFamily: 'Poppins_700Bold',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 3 },
-    textShadowRadius: 6,
-    letterSpacing: 2,
-    flexShrink: 1,
+    flex: 1,
+    color: '#FFFFFF',
+    fontFamily: 'SpaceGrotesk_700Bold', // Space Grotesk Bold (closest to Black/900)
+    letterSpacing: -0.8, // -1.5% approximation
+    textAlign: 'right',
+    // Native fallback shadows (Web uses CSS text-shadow via getTextShadowStyle)
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 12,
   },
+  // Glow burst overlays
+  glowBurstOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 28,
+  },
+  glowBurstPurple: {
+    backgroundColor: 'rgba(139, 92, 246, 0.3)',
+  },
+  glowBurstCoral: {
+    backgroundColor: 'rgba(255, 107, 107, 0.3)',
+  },
+  // Peek badge
   peekBadge: {
     position: 'absolute',
     top: 16,
     right: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
   },
   peekBadgeLeading: {
-    backgroundColor: 'rgba(255, 215, 0, 0.9)',
+    backgroundColor: 'rgba(255, 215, 0, 0.95)',
   },
   peekText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Poppins_700Bold',
   },
+  // Hyperstreak styles
   hyperGlow: {
     borderWidth: 3,
-    borderColor: '#00FFBD',
+    borderColor: COLORS.accent,
   },
   hyperOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -455,11 +511,11 @@ const styles = StyleSheet.create({
   hyperBorder: {
     flex: 1,
     borderWidth: 4,
-    borderColor: '#00FFBD',
-    borderRadius: 32,
-    shadowColor: '#00FFBD',
+    borderColor: COLORS.accent,
+    borderRadius: 28,
+    shadowColor: COLORS.accent,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
+    shadowOpacity: 0.8,
+    shadowRadius: 28,
   },
 });
