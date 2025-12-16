@@ -188,3 +188,4 @@ export function didWinHotTake(
   return (majorityIsA && userChoice === 'a') || (!majorityIsA && userChoice === 'b');
 }
 
+

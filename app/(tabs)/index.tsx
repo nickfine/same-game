@@ -556,7 +556,7 @@ export default function FeedScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         {/* ═══════════════════════════════════════════════════════════
             TOP 15% - AppHeader + StreakStrip
         ═══════════════════════════════════════════════════════════ */}
@@ -624,22 +624,30 @@ export default function FeedScreen() {
         )}
 
         {/* ═══════════════════════════════════════════════════════════
-            BOTTOM 10% - Compact PowerUpBar
+            BOTTOM SECTION - PowerUpBar + Ad Placeholder
         ═══════════════════════════════════════════════════════════ */}
         {currentQuestion && (
-          <View style={styles.powerUpSection}>
-            <PowerUpBar
-              powerUps={powerUps}
-              userScore={user?.score ?? 0}
-              doubleDownActive={doubleDownActive}
-              peekActive={peekActive}
-              onUsePeek={handleUsePeek}
-              onUseSkip={handleUseSkip}
-              onUseDoubleDown={handleUseDoubleDown}
-              disabled={voteLoading}
-              hidden={showingResult}
-              compact={true}
-            />
+          <View style={styles.bottomSection}>
+            {/* Power-Up Bar with Labels */}
+            <View style={styles.powerUpSection}>
+              <PowerUpBar
+                powerUps={powerUps}
+                userScore={user?.score ?? 0}
+                doubleDownActive={doubleDownActive}
+                peekActive={peekActive}
+                onUsePeek={handleUsePeek}
+                onUseSkip={handleUseSkip}
+                onUseDoubleDown={handleUseDoubleDown}
+                disabled={voteLoading}
+                hidden={showingResult}
+                compact={false}
+              />
+            </View>
+
+            {/* Ad Placeholder */}
+            <View style={styles.adPlaceholder}>
+              <Text style={styles.adPlaceholderText}>ADVERTISEMENT</Text>
+            </View>
           </View>
         )}
 
@@ -832,11 +840,13 @@ const styles = StyleSheet.create({
   // ═══════════════════════════════════════════════════════════════
   headerSection: {
     // ~15% of screen
+    paddingHorizontal: 16, // Add padding around streak meter for breathing room
+    paddingBottom: 8, // Extra space below streak meter
   },
   heroButtonsSection: {
-    flex: 0.75, // Reduce buttons to 75% of available space
-    marginHorizontal: 0,
-    marginTop: 8,
+    flex: 0.65, // Reduce to 65% to make room for larger bottom section with power-ups and ad
+    marginHorizontal: 16, // Add horizontal margin to prevent encroachment
+    marginTop: 16, // Increased from 8 to create more breathing room from streak meter
     marginBottom: 12,
   },
   hotTakeBadgeContainer: {
@@ -845,8 +855,38 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     zIndex: 10,
   },
+  bottomSection: {
+    // Bottom section containing power-ups and ad
+    flex: 0.2, // 20% of screen for bottom section
+    justifyContent: 'space-between', // Space between power-ups and ad
+  },
   powerUpSection: {
-    // ~10% of screen (56px fixed)
+    // Power-ups centered in remaining space above ad
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 0, // Remove padding to allow true centering
+  },
+  adPlaceholder: {
+    // Ad placeholder at very bottom - Standard mobile banner size (320x50)
+    height: 50, // Standard mobile banner height (320x50 is the most common)
+    backgroundColor: COLORS.surface, // Neutral surface color
+    borderTopWidth: 1,
+    borderTopColor: COLORS.glassBorder,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 0, // Remove horizontal margin to align with edges
+    marginBottom: 0, // Remove bottom margin to align with screen bottom
+    borderRadius: 0, // Remove border radius for flush alignment
+    minHeight: 50, // Ensure minimum height
+    opacity: 0.6, // Subtle opacity to indicate placeholder
+  },
+  adPlaceholderText: {
+    fontSize: 10,
+    fontFamily: 'Poppins_400Regular',
+    color: COLORS.textMuted,
+    letterSpacing: 0.5,
+    opacity: 0.5, // More subtle text
   },
   
   // Multiplier badge

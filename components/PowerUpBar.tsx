@@ -101,7 +101,7 @@ function PowerUpButton({
           {icon}
         </View>
         
-        {/* Label - hidden in compact mode */}
+        {/* Label - always show when not in compact mode */}
         {!compact && (
           <Text style={[
             styles.powerUpLabel,
@@ -167,7 +167,7 @@ export function PowerUpBar({
   hidden = false,
   compact = false,
 }: PowerUpBarProps) {
-  const iconSize = compact ? 22 : 28;
+  const iconSize = compact ? 32 : 36; // Larger icons when labels are shown (non-compact)
   
   return (
     <View style={[
@@ -261,8 +261,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   containerCompact: {
-    paddingVertical: 4,
-    height: 56,
+    paddingVertical: 8,
+    height: 72, // Increased from 56 to 72 for better proportions
     justifyContent: 'center',
   },
   hidden: {
@@ -275,16 +275,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   powerUpsRowCompact: {
-    gap: 8,
+    gap: 12, // Increased from 8 to 12 for better spacing
   },
   powerUpButton: {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.surface,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     borderRadius: 16,
-    minWidth: 70,
+    minWidth: 90, // Increased for better proportions with labels
     borderWidth: 2,
     borderColor: COLORS.glassBorder,
     shadowColor: '#000',
@@ -295,25 +295,26 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   powerUpButtonCompact: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    minWidth: 50,
-    borderRadius: 12,
-    borderWidth: 1,
+    paddingHorizontal: 16, // Increased from 12
+    paddingVertical: 10, // Increased from 6
+    minWidth: 70, // Increased from 50 to 70 for better proportions
+    borderRadius: 16, // Increased from 12 for smoother look
+    borderWidth: 2, // Increased from 1 for better visibility
   },
   powerUpButtonDisabled: {
     opacity: 0.5,
   },
   iconContainer: {
-    marginBottom: 4,
+    marginBottom: 6, // Increased spacing for better label separation
   },
   iconContainerCompact: {
-    marginBottom: 0,
+    marginBottom: 2, // Small margin for better spacing
   },
   powerUpLabel: {
-    fontSize: 11,
+    fontSize: 12, // Slightly larger for better readability
     fontFamily: 'Poppins_600SemiBold',
     color: COLORS.text,
+    marginTop: 2,
   },
   textDisabled: {
     color: COLORS.textMuted,
@@ -330,11 +331,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   countBadgeCompact: {
-    top: -4,
-    right: -4,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
+    top: -6,
+    right: -6,
+    minWidth: 20, // Increased from 16
+    height: 20, // Increased from 16
+    borderRadius: 10, // Increased from 8
   },
   countText: {
     fontSize: 11,
@@ -342,7 +343,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   countTextCompact: {
-    fontSize: 9,
+    fontSize: 10, // Increased from 9
   },
   costBadge: {
     position: 'absolute',
@@ -354,11 +355,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   costBadgeCompact: {
-    top: -4,
-    right: -4,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 6,
+    top: -6,
+    right: -6,
+    paddingHorizontal: 6, // Increased from 4
+    paddingVertical: 2, // Increased from 1
+    borderRadius: 8, // Increased from 6
   },
   costBadgeDisabled: {
     backgroundColor: COLORS.destructive,
@@ -369,7 +370,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   costTextCompact: {
-    fontSize: 8,
+    fontSize: 9, // Increased from 8
   },
   costTextDisabled: {
     color: '#fff',
@@ -382,10 +383,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   activeIndicatorCompact: {
-    bottom: -6,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4,
+    bottom: -8,
+    paddingHorizontal: 8, // Increased from 6
+    paddingVertical: 2, // Increased from 1
+    borderRadius: 6, // Increased from 4
   },
   activeText: {
     fontSize: 8,
@@ -393,7 +394,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   activeTextCompact: {
-    fontSize: 7,
+    fontSize: 8, // Increased from 7
   },
   activeWarning: {
     marginTop: 12,
